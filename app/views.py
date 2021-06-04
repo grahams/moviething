@@ -28,7 +28,12 @@ def requireApiKey(view_function):
     @wraps(view_function)
     # the new, post-decoration function. Note *args and **kwargs here.
     def decorated_function(*args, **kwargs):
-        if request.args.get('apiKey') and request.args.get('apiKey') == validApiKey:
+        req = request.values
+
+        if request.method == "POST":
+            req = request.form
+
+        if req.get('apiKey') and req.get('apiKey') == validApiKey:
             return view_function(*args, **kwargs)
         else:
             abort(401)
@@ -36,7 +41,12 @@ def requireApiKey(view_function):
 
 @app.route('/')
 def home():
-    year = request.args.get('year')
+    req = request.values
+
+    if request.method == "POST":
+        req = request.form
+
+    year = req.get('year')
 
     if(year == None):
         year = str(datetime.now().year)
@@ -49,8 +59,12 @@ def home():
 @app.route('/searchMovie', methods=['GET', 'POST'])
 @requireApiKey
 def searchMovie():
-    apiKey = request.values.get('apiKey')
-    jsonDict = json.loads(request.values.get('json'))
+    req = request.values
+
+    if request.method == "POST":
+        req = request.form
+
+    jsonDict = json.loads(req.get('json'))
 
     title = urllib.parse.quote_plus(jsonDict["title"])
     url = "https://private.omdbapi.com/?apiKey=%s&s=%s&type=movie" % (omdbApiKey, title)
@@ -62,7 +76,12 @@ def searchMovie():
 @app.route('/getMovieDetails', methods=['GET', 'POST'])
 @requireApiKey
 def getMovieDetails():
-    jsonDict = json.loads(request.values.get('json'))
+    req = request.values
+
+    if request.method == "POST":
+        req = request.form
+
+    jsonDict = json.loads(req.get('json'))
     imdbID = jsonDict["imdbID"]
     url = "https://www.omdbapi.com/?apiKey=%s&i=%s" % (omdbApiKey, imdbID)
 
@@ -83,7 +102,12 @@ def getMovieDetails():
 @app.route('/newEntry', methods=['GET', 'POST'])
 @requireApiKey
 def newEntry():
-    jsonDict = json.loads(request.values.get('json'))
+    req = request.values
+
+    if request.method == "POST":
+        req = request.form
+
+    jsonDict = json.loads(req.get('json'))
 
     movieTitle = jsonDict["movieTitle"]
     viewingDate = jsonDict["viewingDate"]
