@@ -3,6 +3,7 @@ services:
   moviething:
     container_name: moviething
     image: grahams/moviething:latest
+    restart: unless-stopped
     env_file: .env
     environment:
       - MOVIETHING_SQL_HOST:${MOVIETHING_SQL_HOST}
