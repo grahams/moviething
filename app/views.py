@@ -11,7 +11,10 @@ from datetime import datetime
 from flask import Flask, request, abort
 
 try:
+    dbhost = os.environ['MOVIETHING_SQL_HOST']
+    dbuser = os.environ['MOVIETHING_SQL_USER']
     dbpass = os.environ['MOVIETHING_SQL_PASS']
+    dbname = os.environ['MOVIETHING_SQL_DB']
     omdbApiKey = os.environ['MOVIETHING_OMDB_API_KEY']
     validApiKey = os.environ['MOVIETHING_VALID_API_KEY']
 
@@ -19,10 +22,10 @@ except KeyError as e:
     print(f"Missing environment variable: {e.args[0]} ")
     exit(-1)
 
-conn = mysql.connector.connect(host="donkey.grahams.wtf", 
-                       user="movies", 
+conn = mysql.connector.connect(host=dbhost,
+                       user=dbuser,
                        passwd=dbpass,
-                       db="movies")
+                       db=dbname)
 
 def requireApiKey(view_function):
     @wraps(view_function)

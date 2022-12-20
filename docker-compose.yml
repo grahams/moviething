@@ -1,0 +1,18 @@
+version: "3.3"
+services:
+  moviething:
+    container_name: moviething
+    image: grahams/moviething:latest
+    env_file: .env
+    environment:
+      - MOVIETHING_SQL_HOST:${MOVIETHING_SQL_HOST}
+      - MOVIETHING_SQL_USER:${MOVIETHING_SQL_USER}
+      - MOVIETHING_SQL_PASS:${MOVIETHING_SQL_PASS}
+      - MOVIETHING_SQL_DB:${MOVIETHING_SQL_DB}
+      - MOVIETHING_OMDB_API_KEY:${MOVIETHING_OMDB_API_KEY}
+      - MOVIETHING_VALID_API_KEY:${MOVIETHING_VALID_API_KEY}
+    restart: unless-stopped
+    volumes:
+      - ./:/app
+    ports:
+       - 55639:80
