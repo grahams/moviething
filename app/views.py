@@ -1,10 +1,12 @@
 import mysql.connector
 import json
+import csv
 import os
 import re
 import urllib
 import dateutil.parser 
 
+from io import StringIO
 from functools import wraps
 from app import app
 from datetime import datetime
@@ -143,28 +145,51 @@ def newEntry():
 @app.route('/exportLetterboxd', methods=['GET', 'POST'])
 @requireApiKey
 def exportLetterboxd():
-    c = conn.cursor()
-    c.execute('SELECT movieTitle,movieURL,viewingDate,firstViewing,movieReview FROM movies WHERE movieURL LIKE "%imdb%"')
+    req = request.values
 
-    rows = []
+    if request.method == "POST":
+        req = request.form
+
+    year = req.get('year')
+
+    if(year == None):
+        year = str(datetime.now().year)
+
+    startDate = year + "0101"
+    endDate = year + "1231"
+
+    c = getRowsBetweenDates(startDate, endDate)
+
+    csvfile = StringIO()
+    fieldnames = ["Title", "imdbID", "WatchedDate", "Rewatch", "Review"]
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+    writer.writeheader()
 
     for row in c:
         o = {}
         o["Title"] = row[0]
-        imdbID = re.match(r".*(tt[0-9]*).*", row[1]).groups()[0]
-        o["imdbID"] = imdbID
-        o["WatchedDate"] = row[2].isoformat()
-        if(row[3] == 1):
+        try:
+            imdbID = re.match(r".*(tt[0-9]*).*", row[2]).groups()[0]
+            o["imdbID"] = imdbID
+        except:
+            continue
+
+        o["WatchedDate"] = row[1].isoformat()
+        if(row[5] == 1):
             o["Rewatch"] = False
         else:
             o["Rewatch"] = True
-        o["Review"] = row[4]
-        rows.append(o);
+        o["Review"] = row[7]
 
-    return json.dumps(rows)
-        
-def getJSONBetweenDates(startDate, endDate):
-    results = []
+        writer.writerow(o)
+
+    output = csvfile.getvalue()
+    csvfile.close()
+
+    return output
+
+def getRowsBetweenDates(startDate, endDate):
     global conn
     conn.reconnect()
     c = conn.cursor()
@@ -177,6 +202,13 @@ def getJSONBetweenDates(startDate, endDate):
                                passwd="ENsYfPsxfFTJbSQy", 
                                db="movies")
         c.execute("SELECT movieTitle,viewingDate,movieURL,viewFormat,viewLocation,firstViewing,movieGenre,movieReview FROM movies WHERE viewingDate BETWEEN date('%s') AND date('%s')" % (startDate, endDate))
+
+    return c
+        
+def getJSONBetweenDates(startDate, endDate):
+    results = []
+
+    c = getRowsBetweenDates(startDate, endDate)
         
     for row in c:
         result = {}
