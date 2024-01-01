@@ -143,7 +143,6 @@ def newEntry():
 
 
 @app.route('/exportLetterboxd', methods=['GET', 'POST'])
-@requireApiKey
 def exportLetterboxd():
     req = request.values
 
@@ -155,14 +154,20 @@ def exportLetterboxd():
     if(year == None):
         year = str(datetime.now().year)
 
-    startDate = year + "0101"
-    endDate = year + "1231"
+    startDate = req.get('startDate')
+    endDate = req.get('endDate')
+
+    if(startDate == None):
+        startDate = year + "0101"
+
+    if(endDate == None):
+        endDate = year + "1231"
 
     c = getRowsBetweenDates(startDate, endDate)
 
     csvfile = StringIO()
     fieldnames = ["Title", "imdbID", "WatchedDate", "Rewatch", "Review"]
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer = csv.DictWriter(csvfile, quoting=csv.QUOTE_MINIMAL, fieldnames=fieldnames)
 
     writer.writeheader()
 
