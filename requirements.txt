@@ -1,3 +1,4 @@
-Flask==1.1.2
+Werkzeug==2.2.2
+Flask==2.2.2
 mysql-connector-python>=8.0.25
 python-dateutil>=2.8.1
