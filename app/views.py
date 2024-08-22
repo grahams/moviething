@@ -1,4 +1,4 @@
-import mysql.connector
+import mariadb
 import json
 import csv
 import os
@@ -24,7 +24,7 @@ except KeyError as e:
     print(f"Missing environment variable: {e.args[0]} ")
     exit(-1)
 
-conn = mysql.connector.connect(host=dbhost,
+conn = mariadb.connect(host=dbhost,
                        user=dbuser,
                        passwd=dbpass,
                        db=dbname)
@@ -137,7 +137,7 @@ def newEntry():
         c.execute("INSERT INTO movies (movieTitle, viewingDate, movieURL, viewFormat, viewLocation, movieGenre, movieReview, firstViewing) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)", (movieTitle, viewingDate, movieURL, viewFormat, viewLocation, movieGenre, movieReview, firstViewingInt) ) 
         conn.commit()
         return('{"OK": "Success"}')
-    except mysql.connector.errors.OperationalError:
+    except mariadb.errors.OperationalError:
         return('{"Error": "Param Error"}')
         conn.rollback()
 
