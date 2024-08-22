@@ -1,4 +1,6 @@
 FROM tiangolo/uwsgi-nginx-flask:latest
+LABEL org.opencontainers.image.source="https://github.com/grahams/moviething"
+
 ENV STATIC_URL=/static
 ENV STATIC_PATH=/var/www/app/static
 
