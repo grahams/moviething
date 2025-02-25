@@ -6,7 +6,7 @@ ENV STATIC_PATH=/var/www/app/static
 
 RUN apt-get install wget
 RUN wget https://r.mariadb.com/downloads/mariadb_repo_setup
-RUN echo "6083ef1974d11f49d42ae668fb9d513f7dc2c6276ffa47caed488c4b47268593 mariadb_repo_setup" | sha256sum -c -
+RUN echo "c4a0f3dade02c51a6a28ca3609a13d7a0f8910cccbb90935a2f218454d3a914a mariadb_repo_setup" | sha256sum -c -
 RUN chmod +x mariadb_repo_setup
 RUN ./mariadb_repo_setup --mariadb-server-version="mariadb-11.4"
 
