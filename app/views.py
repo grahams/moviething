@@ -254,10 +254,5 @@ def checkExistingInfo(imdbID):
         result["movieReview"] = str(row[5])
         results.append(result)
 
-    if(len(results) == 0):
-        result = {}
-        result["firstViewing"] = True
-        results.append(result)
-
     return results
 
