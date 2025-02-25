@@ -96,9 +96,9 @@ def getMovieDetails():
 
     existing = checkExistingInfo(imdbID)
 
-    if(not existing["firstViewing"]):
+    if(len(existing) > 0):
         data["firstViewing"] = False
-        data["previousGenre"] = existing["movieGenre"]
+        data["previousViewings"] = existing
     else:
         data["firstViewing"] = True
 
@@ -237,16 +237,27 @@ def getJSONBetweenDates(startDate, endDate):
     return json.dumps(results, ensure_ascii=False)
 
 def checkExistingInfo(imdbID):
-    result = {"firstViewing": True}
-
     conn.reconnect()
     c = conn.cursor()
-    c.execute('SELECT movieTitle,movieGenre FROM movies WHERE movieURL LIKE "%' + str(imdbID) + '%"')
+    c.execute('SELECT movieTitle,movieGenre,viewingDate,viewFormat,viewLocation,movieReview FROM movies WHERE movieURL LIKE "%' + str(imdbID) + '%"')
+
+    results = []
 
     for row in c:
+        result = {}
         result["firstViewing"] = False
+        result["movieTitle"] = str(row[0])
         result["movieGenre"] = str(row[1])
-        break
+        result["viewingDate"] = str(row[2])
+        result["viewFormat"] = str(row[3])
+        result["viewLocation"] = str(row[4])
+        result["movieReview"] = str(row[5])
+        results.append(result)
 
-    return result
+    if(len(results) == 0):
+        result = {}
+        result["firstViewing"] = True
+        results.append(result)
+
+    return results
 
