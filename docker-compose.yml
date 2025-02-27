@@ -1,16 +1,13 @@
-version: "3.3"
 services:
-  moviething:
+  app:
     container_name: moviething
-    build:
+    build: 
       context: .
       dockerfile: Dockerfile
     image: grahams/moviething:latest
     restart: unless-stopped
-    env_file: .env
     environment:
       - NODE_ENV=production
-      - PORT=3000
       - MOVIETHING_SQL_HOST=${MOVIETHING_SQL_HOST}
       - MOVIETHING_SQL_USER=${MOVIETHING_SQL_USER}
       - MOVIETHING_SQL_PASS=${MOVIETHING_SQL_PASS}
@@ -20,8 +17,11 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./src:/app/src
-      - ./package.json:/app/package.json
-      - ./package-lock.json:/app/package-lock.json
-      # Exclude node_modules from volume mounting
+      - .:/app
       - /app/node_modules
+    networks:
+      - mariadb
+
+networks:
+  mariadb:
+    external: true
