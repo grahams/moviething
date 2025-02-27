@@ -1,17 +1,41 @@
-FROM tiangolo/uwsgi-nginx-flask:latest
+FROM node:20-slim AS builder
 LABEL org.opencontainers.image.source="https://github.com/grahams/moviething"
 
-ENV STATIC_URL=/static
-ENV STATIC_PATH=/var/www/app/static
+WORKDIR /app
 
-RUN apt-get install wget
-RUN wget https://r.mariadb.com/downloads/mariadb_repo_setup
-RUN echo "c4a0f3dade02c51a6a28ca3609a13d7a0f8910cccbb90935a2f218454d3a914a mariadb_repo_setup" | sha256sum -c -
-RUN chmod +x mariadb_repo_setup
-RUN ./mariadb_repo_setup --mariadb-server-version="mariadb-11.4"
+# Install build dependencies for MariaDB
+RUN apt-get update && apt-get install -y \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt install -y libmariadb-dev
-RUN apt install -y libmariadb3 
+# Install MariaDB Connector/C
+RUN wget https://dlm.mariadb.com/2862620/Connectors/c/connector-c-3.3.7/mariadb-connector-c-3.3.7-debian-buster-amd64.tar.gz \
+    && tar -xvf mariadb-connector-c-3.3.7-debian-buster-amd64.tar.gz \
+    && cp mariadb-connector-c-3.3.7-debian-buster-amd64/lib/libmariadb.so.3 /usr/lib/ \
+    && rm -rf mariadb-connector-c-3.3.7-debian-buster-amd64*
 
-COPY ./requirements.txt /var/www/requirements.txt
-RUN pip install -r /var/www/requirements.txt
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source
+COPY . .
+
+# Production image
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy MariaDB connector from builder
+COPY --from=builder /usr/lib/libmariadb.so.3 /usr/lib/
+
+# Copy node modules and source
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/package.json ./
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
