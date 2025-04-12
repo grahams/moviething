@@ -1,0 +1,29 @@
+name: Deploy Node Image to GHCR
+
+on:
+  push:
+    branches:
+      - node
+  workflow_dispatch:
+
+jobs:
+      push-moviething-node-image:
+        runs-on: ubuntu-latest
+        defaults:
+          run:
+            working-directory: '.'
+        steps:
+          - name: 'Checkout GitHub Action'
+            uses: actions/checkout@node
+
+          - name: 'Login to GitHub Container Registry'
+            uses: docker/login-action@v3
+            with:
+              registry: ghcr.io
+              username: ${{github.actor}}
+              password: ${{secrets.GITHUB_TOKEN}}
+
+          - name: 'Build Inventory Image'
+            run: |
+              docker build . --tag ghcr.io/grahams/moviething:node
+              docker push ghcr.io/grahams/moviething:node
