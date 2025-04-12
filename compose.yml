@@ -19,11 +19,6 @@ services:
       - CLIENT_PORT=3001
     ports:
       - 3000:3000  # Server
-      - 3001:3001  # Client
-    volumes:
-      - ./server:/app/server
-      - ./client:/app/client
-      - /app/node_modules
     logging:
       driver: "json-file"
       options:

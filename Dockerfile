@@ -10,14 +10,14 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY server/package*.json ./server/
-COPY client/package*.json ./client/
+COPY server/ ./server/
+COPY client/ ./client/
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN npm install
 
 # Copy application code
-COPY . .
+#COPY . .
 
 ENV NODE_ENV=production
 
@@ -26,4 +26,4 @@ EXPOSE 3000
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
-CMD ["sh", "-c", "npm start --workspace=server & npm start --workspace=client"]
+CMD ["sh", "-c", "npm start"] 

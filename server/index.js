@@ -252,13 +252,9 @@ apiRouter.get('/exportLetterboxd', async (req, res) => {
 // Mount API routes under /api
 app.use('/api', apiRouter);
 
-// Serve static files from client directory
+// Serve static files from client/moviecharts directory
 app.use(express.static(path.join(__dirname, '..', 'client')));
 
-// Handle all other routes by serving the index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'client', 'index.html'));
-});
 
 // Export the app and createServer function
 const createServer = () => {
