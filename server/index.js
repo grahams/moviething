@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 const { stringify } = require('csv-stringify');
 const cors = require('cors');
 require('dotenv').config({ override: true });
+const path = require('path');
 
 const app = express();
 
@@ -34,10 +35,34 @@ const pool = process.env.NODE_ENV !== 'test' ? mariadb.createPool({
   connectionLimit: 5
 }) : mariadb.createPool();  // In test environment, this will be mocked
 
+// Test database connection
+async function testConnection() {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    console.log('Successfully connected to MariaDB');
+  } catch (err) {
+    console.error('Database connection failed:', err);
+    process.exit(1);
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware for error handling
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
 // Create API router
 const apiRouter = express.Router();
@@ -227,19 +252,28 @@ apiRouter.get('/exportLetterboxd', async (req, res) => {
 // Mount API routes under /api
 app.use('/api', apiRouter);
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('../client/build'));
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '..', 'client', 'build', 'index.html'));
-  });
-}
+// Serve static files from client directory
+app.use(express.static(path.join(__dirname, '..', 'client')));
+
+// Handle all other routes by serving the index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'client', 'index.html'));
+});
 
 // Export the app and createServer function
 const createServer = () => {
   const port = process.env.PORT || 3000;
-  return app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+  
+  // Test database connection before starting server
+  testConnection().then(() => {
+    return app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+      console.log('Environment:', process.env.NODE_ENV);
+      console.log('Database host:', process.env.MOVIETHING_SQL_HOST);
+    });
+  }).catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 };
 

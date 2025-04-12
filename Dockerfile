@@ -1,8 +1,9 @@
-FROM node:20-bullseye-slim
+FROM node:20-bullseye-slim 
 
-# Install MariaDB client libraries
+# Install MariaDB client libraries and curl for health checks
 RUN apt-get update && apt-get install -y \
     libmariadb3 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -19,6 +20,10 @@ RUN npm ci --only=production
 COPY . .
 
 ENV NODE_ENV=production
-EXPOSE 3000
 
-CMD ["npm", "start", "--workspace=server"]
+# Combined stage that runs both client and server
+EXPOSE 3000
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+CMD ["sh", "-c", "npm start --workspace=server & npm start --workspace=client"]
