@@ -83,7 +83,7 @@ var requestData = function(path) {
     }).fail(function() {
         if(!retry) {
             retry = true;
-            requestData("http://localhost:3000/api/?year=" + year);
+            requestData("/api/?year=" + year);
         }
     }) 
 };

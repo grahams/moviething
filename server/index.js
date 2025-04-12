@@ -258,7 +258,7 @@ app.use(express.static(path.join(__dirname, '..', 'client')));
 
 // Export the app and createServer function
 const createServer = () => {
-  const port = process.env.PORT || 3000;
+  const port = process.env.SERVER_PORT || 3000;
   
   // Test database connection before starting server
   testConnection().then(() => {
