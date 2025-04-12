@@ -17,6 +17,9 @@ client/dist/
 .env.test.local
 .env.production.local
 
+# test mariadb instance
+mariadb/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
