@@ -1,7 +1,7 @@
 services:
   app:
     container_name: moviething
-    image: ghcr.io/grahams/moviething:node
+    image: ghcr.io/grahams/moviething:latest
     restart: unless-stopped
     env_file: .env
     environment:
