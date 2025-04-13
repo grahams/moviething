@@ -1,0 +1,79 @@
+services:
+  app:
+    container_name: moviething
+    image: ghcr.io/grahams/moviething:node
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - MOVIETHING_SQL_HOST=${MOVIETHING_SQL_HOST:-mariadb}
+      - MOVIETHING_SQL_USER=${MOVIETHING_SQL_USER:-root}
+      - MOVIETHING_SQL_PASS=${MOVIETHING_SQL_PASS:-password}
+      - MOVIETHING_SQL_DB=${MOVIETHING_SQL_DB:-movies}
+      - MOVIETHING_OMDB_API_KEY=${MOVIETHING_OMDB_API_KEY}
+      - MOVIETHING_VALID_API_KEY=${MOVIETHING_VALID_API_KEY}
+      - SERVER_PORT=3001
+    ports:
+      - 3000:3001  # Server
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: moviething-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MOVIETHING_SQL_PASS:-password}
+      - MYSQL_DATABASE=${MOVIETHING_SQL_DB:-movies}
+      - MYSQL_USER=${MOVIETHING_SQL_USER:-root}
+      - MYSQL_PASSWORD=${MOVIETHING_SQL_PASS:-password}
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mariadb/db:/var/lib/mysql
+      - ./mariadb/backup:/backup
+      - ./mariadb/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./mariadb/my-resolve.cnf:/etc/mysql/conf.d/my-resolve.cnf:ro
+      - ./mariadb/backup.options:/backup.options:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MOVIETHING_SQL_USER}", "-p${MOVIETHING_SQL_PASS:-password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: moviething-pma
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_PORT=3306
+      - PMA_USER=${MOVIETHING_SQL_USER:-root}
+      - PMA_PASSWORD=${MOVIETHING_SQL_PASS:-password}
+      - UPLOAD_LIMIT=512M
+    ports:
+      - 8080:80
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:

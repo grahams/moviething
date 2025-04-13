@@ -1,0 +1,108 @@
+const request = require('supertest');
+const { app } = require('../src/app');
+const mariadb = require('mariadb');
+
+describe('Movie API Endpoints', () => {
+  let mockConnection;
+
+  beforeEach(() => {
+    mockConnection = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+    mariadb.createPool().getConnection.mockResolvedValue(mockConnection);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('GET /', () => {
+    it('should return movies for the current year', async () => {
+      const mockMovies = [
+        {
+          movieTitle: 'Test Movie',
+          viewingDate: new Date('2024-01-01'),
+          movieURL: 'https://www.imdb.com/title/tt1234567/',
+          viewFormat: 'Digital',
+          viewLocation: 'Home',
+          firstViewing: 1,
+          movieGenre: 'Action',
+          movieReview: 'Great movie!'
+        }
+      ];
+
+      // Mock the database query to return our test data
+      mockConnection.query.mockResolvedValueOnce(mockMovies);
+
+      const response = await request(app)
+        .get('/')
+        .expect(200);  // Using supertest's expect
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].movieTitle).toBe('Test Movie');
+      expect(mockConnection.query).toHaveBeenCalled();
+    });
+
+    it('should handle database errors', async () => {
+      mockConnection.query.mockRejectedValueOnce(new Error('Database error'));
+      
+      await request(app)
+        .get('/')
+        .expect(500);
+    });
+  });
+
+  describe('POST /searchMovie', () => {
+    it('should require API key', async () => {
+      await request(app)
+        .post('/searchMovie')
+        .send({ json: JSON.stringify({ title: 'Test' }) })
+        .expect(401);
+    });
+
+    it('should search for movies with valid API key', async () => {
+      const mockOmdbResponse = { Search: [{ Title: 'Test Movie', Year: '2024' }] };
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve(mockOmdbResponse)
+        })
+      );
+
+      await request(app)
+        .post('/searchMovie')
+        .send({ 
+          json: JSON.stringify({ title: 'Test' }),
+          apiKey: process.env.MOVIETHING_VALID_API_KEY
+        })
+        .expect(200);
+    });
+  });
+
+  describe('GET /exportLetterboxd', () => {
+    it('should export CSV data', async () => {
+      const mockMovies = [
+        {
+          movieTitle: 'Test Movie',
+          viewingDate: new Date('2024-01-01'),
+          movieURL: 'https://www.imdb.com/title/tt1234567/',
+          viewFormat: 'Digital',
+          viewLocation: 'Home',
+          firstViewing: 1,
+          movieGenre: 'Action',
+          movieReview: 'Great movie!'
+        }
+      ];
+
+      mockConnection.query.mockResolvedValueOnce(mockMovies);
+
+      const response = await request(app)
+        .get('/exportLetterboxd')
+        .expect(200)
+        .expect('Content-Type', /text\/csv/)
+        .expect('Content-Disposition', 'attachment; filename=letterboxd.csv');
+
+      // Additional CSV content checks could go here
+    });
+  });
+}); 

@@ -1,0 +1,135 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="manifest" href="site.webmanifest">
+        <link rel="apple-touch-icon" href="icon.png">
+        <!-- Place favicon.ico in the root directory -->
+
+        <link rel="stylesheet" href="css/normalize.css">
+        <link rel="stylesheet" href="css/main.css">
+    </head>
+    <body>
+        <!--[if lte IE 9]>
+            <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
+        <![endif]-->
+
+        <div class="container p-2">
+            <form>
+                <div>
+                    <input id="apiKey" type="password" class="form-control" placeholder="API Key">
+                </div>
+            </form>
+            <form>
+                <div class="row">
+                    <div class="col-12 position-relative">
+                        <input id="searchName" type="text" class="form-control" placeholder="Search name" data-1p-ignore>
+                        <div id="searchResults" class="dropdown-menu w-100" style="position: absolute; top: 100%; left: 0; z-index: 1000; display: none;"></div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <input id="lookupId" type="text" class="form-control" placeholder="Lookup IMDB ID">
+                    </div>
+                </div>
+            </form>
+
+            <form id="movieForm">
+                <div class="row">
+                    <div class="col-12">
+                        <input id="movieTitle" type="text" class="form-control" placeholder="Movie name">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <input id="viewingDate" data-provide="datepicker" type="text" class="form-control" placeholder="Viewing date">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <input id="movieURL" type="text" class="form-control" placeholder="Movie URL">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <select name="viewFormat" id="viewFormat" class="custom-select">
+                            <option value="viewFormat">View Format</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <select name="viewLocation" id="viewLocation" class="custom-select">
+                            <option value="viewLocation">View Location</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <input id="movieGenre" type="text" class="form-control" placeholder="Movie genre">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <textarea id="movieReview" class="form-control" placeholder="Movie review"></textarea>
+                    </div>
+                </div>
+
+                <div class="row custom-control custom-checkbox">
+                    <div class="col-12">
+                        <input type="checkbox" class="custom-control-input" id="firstViewing" checked>
+                        <label class="custom-control-label" for="firstViewing">First viewing?</label>
+                    </div>
+                </div>
+
+                <div class="row custom-control custom-button">
+                    <div class="col-12">
+                        <button id="formSubmit" type="button" class="btn btn-primary" disabled="disabled">Submit</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="mt-4">
+                <h4 id="viewingsHeader" class="mb-3" style="display: none;">Previous viewings of <span id="viewingsMovieTitle"></span></h4>
+                <table class="table table-sm" id="viewingsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Format</th>
+                            <th>Location</th>
+                            <th>Review</th>
+                        </tr>
+                    </thead>
+                    <tbody id="viewingsList">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script src="js/vendor/modernizr-3.5.0.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/1.0.0/json2html.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-3.2.1.min.js"><\/script>')</script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/js/bootstrap-datepicker.min.js" integrity="sha256-TueWqYu0G+lYIimeIcMI8x1m14QH/DQVt4s9m/uuhPw=" crossorigin="anonymous"></script>
+
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/css/bootstrap-datepicker3.min.css" integrity="sha256-WgFzD1SACMRatATw58Fxd2xjHxwTdOqB48W5h+ZGLHA=" crossorigin="anonymous" />
+
+            
+        <script src="js/vendor/URI.js"></script>
+        <script src="js/vendor/omdb-client.min.js"></script>
+        <script src="js/plugins.js"></script>
+        <script src="js/main.js"></script>
+    </body>
+</html>
