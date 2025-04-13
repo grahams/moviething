@@ -12,10 +12,9 @@ services:
       - MOVIETHING_SQL_DB=${MOVIETHING_SQL_DB:-movies}
       - MOVIETHING_OMDB_API_KEY=${MOVIETHING_OMDB_API_KEY}
       - MOVIETHING_VALID_API_KEY=${MOVIETHING_VALID_API_KEY}
-      - SERVER_PORT=3000
-      - CLIENT_PORT=3001
+      - SERVER_PORT=3001
     ports:
-      - 3000:3000  # Server
+      - 3000:3001  # Server
     logging:
       driver: "json-file"
       options:

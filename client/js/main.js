@@ -103,6 +103,25 @@ $(document).ready(function() {
         searchMovie($("#searchName").val().toTitleCase());
     })
 
+    // Add keyup event for real-time search
+    $("#searchName").on("keyup", function(e) {
+        if ($(this).val().length >= 2) {
+            searchMovie($(this).val().toTitleCase());
+        } else {
+            $("#searchResults").hide().empty();
+        }
+    });
+
+    // Close dropdown when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#searchName, #searchResults').length) {
+            $("#searchResults").hide();
+        }
+    });
+
+    // Remove any existing click handlers before adding new ones
+    $(document).off('click', '#searchResults .dropdown-item');
+
     $("#lookupId").on("change", function(e) {
 		var id = $("#lookupId").val();
 
@@ -192,28 +211,32 @@ var searchMovie = function(title) {
             });
         }
 
-        var t = 
-            {'<>':'tr','html': [
-                {'<>':'td',
-                    'html': [{
-                        '<>':'a',
-                        'html': '${Title}',
-                    }, 
-                ]},
-                {'<>':'td','html': '${Year}'}
-            ], 'data-imdbid':'${imdbID}' };
-    
-        $("#dest").html(( json2html.transform(data.Search, t) ));
-
-        $("#searchTable tr").click(function() {
-            var imdbId = $(this).data("imdbid");
-
-            getMovieDetails(imdbId);
-        });
-            
+        var $results = $("#searchResults");
+        $results.empty();
+        
+        if (data.Search && data.Search.length > 0) {
+            data.Search.forEach(function(movie) {
+                var $item = $('<a class="dropdown-item" href="#" data-imdbid="' + movie.imdbID + '">' + 
+                  movie.Title + ' (' + movie.Year + ')</a>');
+                
+                $item.on('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var imdbId = $(this).data('imdbid');
+                    $results.hide();
+                    getMovieDetails(imdbId);
+                    return false;
+                });
+                
+                $results.append($item);
+            });
+            $results.show();
+        } else {
+            $results.hide();
+        }
     })
     .fail(function(data) {
-        console.log( "error" );
+        console.log("error");
     })
 };
 

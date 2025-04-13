@@ -22,71 +22,82 @@
         <div class="d-flex p-2">
             <div class="col-sm">
                 <form>
-                    <div class="row">
+                    <div>
                         <input id="apiKey" type="password" class="form-control" placeholder="API Key">
                     </div>
                 </form>
                 <form>
                     <div class="row">
-                        <input id="searchName" type="text" class="form-control" placeholder="Search name" data-1p-ignore>
+                        <div class="col-12 position-relative">
+                            <input id="searchName" type="text" class="form-control" placeholder="Search name" data-1p-ignore>
+                            <div id="searchResults" class="dropdown-menu w-100" style="position: absolute; top: 100%; left: 0; z-index: 1000; display: none;"></div>
+                        </div>
                     </div>
                     <div class="row">
-                        <input id="lookupId" type="text" class="form-control" placeholder="Lookup IMDB ID">
+                        <div class="col-12">
+                            <input id="lookupId" type="text" class="form-control" placeholder="Lookup IMDB ID">
+                        </div>
                     </div>
                 </form>
 
 				<form id="movieForm">
 					<div class="row">
-						<input id="movieTitle" type="text" class="form-control" placeholder="Movie name">
+						<div class="col-12">
+							<input id="movieTitle" type="text" class="form-control" placeholder="Movie name">
+						</div>
 					</div>
 					<div class="row">
-						<input id="viewingDate" data-provide="datepicker" type="text" class="form-control" placeholder="Viewing date">
+						<div class="col-12">
+							<input id="viewingDate" data-provide="datepicker" type="text" class="form-control" placeholder="Viewing date">
+						</div>
 					</div>
 					<div class="row">
-						<input id="movieURL" type="text" class="form-control" placeholder="Movie URL">
+						<div class="col-12">
+							<input id="movieURL" type="text" class="form-control" placeholder="Movie URL">
+						</div>
 					</div>
 					<div class="row">
-						<!-- <input id="viewFormat" type="text" class="form-control" placeholder="View format"> -->
-						<select name="viewFormat" id="viewFormat" class="custom-select">
-							<option value="viewFormat">View Format</option>
-						</select>
+						<div class="col-12">
+							<select name="viewFormat" id="viewFormat" class="custom-select">
+								<option value="viewFormat">View Format</option>
+							</select>
+						</div>
 					</div>
 					<div class="row">
-						<select name="viewLocation" id="viewLocation" class="custom-select">
-							<option value="viewLocation">View Location</option>
-						</select>
+						<div class="col-12">
+							<select name="viewLocation" id="viewLocation" class="custom-select">
+								<option value="viewLocation">View Location</option>
+							</select>
+						</div>
 					</div>
 					<div class="row">
-						<input id="movieGenre" type="text" class="form-control" placeholder="Movie genre">
+						<div class="col-12">
+							<input id="movieGenre" type="text" class="form-control" placeholder="Movie genre">
+						</div>
 					</div>
 
 					<div class="row">
-						<textarea id="movieReview" class="form-control" placeholder="Movie review"></textarea>
+						<div class="col-12">
+							<textarea id="movieReview" class="form-control" placeholder="Movie review"></textarea>
+						</div>
 					</div>
 
 					<div class="row custom-control custom-checkbox">
-						<input type="checkbox" class="custom-control-input" id="firstViewing" checked>
-						<label class="custom-control-label" for="firstViewing">First viewing?</label>
+						<div class="col-12">
+							<input type="checkbox" class="custom-control-input" id="firstViewing" checked>
+							<label class="custom-control-label" for="firstViewing">First viewing?</label>
+						</div>
 					</div>
 
 					<div class="row custom-control custom-button">
-						<button id="formSubmit" type="button" class="btn btn-primary" disabled="disabled">Submit</button>
+						<div class="col-12">
+							<button id="formSubmit" type="button" class="btn btn-primary" disabled="disabled">Submit</button>
+						</div>
 					</div>
 				</form>
             </div>
 
             <div class="col-sm">
-                <div class="d-flex p-2">
-                    <table class="table table-sm table-hover" id="searchTable">
-                        <thead>
-                            <th>Title</th>
-                            <th>Year</th>
-                        </thead>
-
-                        <tbody id="dest">
-                        </tbody>
-                    </table>
-                </div>
                 <div class="d-flex p-2">
                     <div class="w-100">
                         <h4 id="viewingsHeader" class="mb-3" style="display: none;">Previous viewings of <span id="viewingsMovieTitle"></span></h4>
