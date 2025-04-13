@@ -1,10 +1,7 @@
 services:
   app:
     container_name: moviething
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    image: grahams/moviething:latest
+    image: ghcr.io/grahams/moviething:node
     restart: unless-stopped
     env_file: .env
     environment:
