@@ -4,6 +4,7 @@ const { parse: parseDate } = require('date-fns');
 const fetch = require('node-fetch');
 const { stringify } = require('csv-stringify');
 const cors = require('cors');
+const RSS = require('rss');
 require('dotenv').config({ override: true });
 const path = require('path');
 
@@ -118,6 +119,32 @@ async function checkExistingInfo(imdbID) {
   }
 }
 
+// Helper function to generate RSS feed XML
+function generateRSSFeed(movies) {
+  const feed = new RSS({
+    title: 'Movie Viewing History',
+    description: 'Feed of recently watched movies',
+    feed_url: `${process.env.MOVIETHING_BASE_URL || 'http://localhost:3000'}/api/rss`,
+    site_url: process.env.MOVIETHING_BASE_URL || 'http://localhost:3000',
+    language: 'en',
+    pubDate: new Date(),
+  });
+
+  movies.forEach(movie => {
+    const title = movie.movieGenre === "Short" ? "Short: " + movie.movieTitle : movie.movieTitle;
+    
+    feed.item({
+      title: title,
+      description: movie.movieReview || 'No review available',
+      url: movie.movieURL,
+      date: new Date(movie.viewingDate),
+      guid: movie.movieURL,
+    });
+  });
+
+  return feed.xml();
+}
+
 // Routes
 apiRouter.get('/', async (req, res) => {
   const year = req.query.year || new Date().getFullYear().toString();
@@ -224,6 +251,7 @@ apiRouter.get('/exportLetterboxd', async (req, res) => {
     const csvData = rows
       .map(row => {
         const imdbIDMatch = row.movieURL && row.movieURL.match(/tt\d{7,8}/);
+
         return {
           Title: row.movieTitle,
           imdbID: imdbIDMatch ? imdbIDMatch[0] : '',
@@ -243,6 +271,24 @@ apiRouter.get('/exportLetterboxd', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=letterboxd.csv');
     
     stringifier.pipe(res);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add RSS feed route
+apiRouter.get('/rss', async (req, res) => {
+  try {
+    const year = req.query.year || new Date().getFullYear().toString();
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+    
+    const rows = await getRowsBetweenDates(startDate, endDate);
+    const rssFeed = generateRSSFeed(rows);
+    
+    res.set('Content-Type', 'application/rss+xml');
+    res.send(rssFeed);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

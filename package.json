@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "rss": "^1.2.2"
   }
-} 
+}
