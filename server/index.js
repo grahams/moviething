@@ -17,7 +17,9 @@ const requiredEnvVars = [
   'MOVIETHING_SQL_PASS',
   'MOVIETHING_SQL_DB',
   'MOVIETHING_OMDB_API_KEY',
-  'MOVIETHING_VALID_API_KEY'
+  'MOVIETHING_VALID_API_KEY',
+  'MOVIETHING_RSS_TITLE',
+  'MOVIETHING_RSS_DESCRIPTION'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -122,8 +124,8 @@ async function checkExistingInfo(imdbID) {
 // Helper function to generate RSS feed XML
 function generateRSSFeed(movies) {
   const feed = new RSS({
-    title: 'Movie Viewing History',
-    description: 'Feed of recently watched movies',
+    title: process.env.MOVIETHING_RSS_TITLE,
+    description: process.env.MOVIETHING_RSS_DESCRIPTION,
     feed_url: `${process.env.MOVIETHING_BASE_URL || 'http://localhost:3000'}/api/rss`,
     site_url: process.env.MOVIETHING_BASE_URL || 'http://localhost:3000',
     language: 'en',
