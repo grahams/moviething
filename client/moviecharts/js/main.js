@@ -15,7 +15,7 @@ $(document).ready(function() {
         year = yearQuery.replace("/","");
     }
 
-    requestData('/local/moviecharts/data/' + year + '.json');
+    requestData('https://movies.grahams.wtf/local/moviecharts/data/' + year + '.json');
 });
 
 var requestData = function(path) {
