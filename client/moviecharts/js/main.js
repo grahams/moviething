@@ -83,7 +83,7 @@ var requestData = function(path) {
     }).fail(function() {
         if(!retry) {
             retry = true;
-            requestData("/api/?year=" + year);
+            requestData("https://movies.grahams.wtf/api/?year=" + year);
         }
     }) 
 };
