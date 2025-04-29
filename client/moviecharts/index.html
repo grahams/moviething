@@ -6,7 +6,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title></title>
+        <title>MovieThing - Movie Charts</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -14,6 +14,7 @@
 
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
         <script src="js/vendor/modernizr-2.6.2.min.js"></script>
     </head>
     <body>
@@ -22,34 +23,40 @@
         <![endif]-->
 
         <!-- Add your site or application content here -->
-        <div id="textStats">
-            <ul>
-            <li>Total # of movies: <span id="textStatsTotal"></span></li>
-            <li>Total # of features: <span id="textStatsFeatures"></span></li>
-            <li>Total # of shorts: <span id="textStatsShorts"></span></li>
-            </ul>
-        </div>
+        <div class="container p-2">
+            <div class="mb-3">
+                <a href="/add" class="btn btn-outline-primary">Add New Movie</a>
+            </div>
 
-        <div id="formatContainer"></div>
-        <div id="theatreContainer"></div>
-        <div id="theatreControlContainer">
-            <button id="theatreControlButton">Toggle "Home"</button>
-        </div>
-        <div id="firstViewingContainer"></div>
-        <div id="genreContainer"></div>
-        <div id="monthContainer"></div>
+            <div id="textStats">
+                <ul>
+                <li>Total # of movies: <span id="textStatsTotal"></span></li>
+                <li>Total # of features: <span id="textStatsFeatures"></span></li>
+                <li>Total # of shorts: <span id="textStatsShorts"></span></li>
+                </ul>
+            </div>
 
-        <div id="movieListDiv">
-            <table id="movieList" class="movie-table">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Review</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
+            <div id="formatContainer"></div>
+            <div id="theatreContainer"></div>
+            <div id="theatreControlContainer">
+                <button id="theatreControlButton">Toggle "Home"</button>
+            </div>
+            <div id="firstViewingContainer"></div>
+            <div id="genreContainer"></div>
+            <div id="monthContainer"></div>
+
+            <div id="movieListDiv">
+                <table id="movieList" class="movie-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <style>
