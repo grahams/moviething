@@ -16,16 +16,8 @@ $(document).ready(function() {
     }
 
     requestData('https://movies.grahams.wtf/moviecharts/data/' + year + '.json');
-});
 
-var requestData = function(path) {
-    createFirstViewingChart();
-    createTheatreChart();
-    createFormatChart();
-    createGenreChart();
-    createMonthChart();
-
-    $('#theatreControlButton').click(function() {
+    $( "#theatreControlButton" ).on( "click", function( event ) {
         var data  = theatreChart.series[0].data;
         if(data.length) {
             for(var x = 0; x < data.length; x += 1) {
@@ -37,6 +29,14 @@ var requestData = function(path) {
             }
         }
     });
+});
+
+var requestData = function(path) {
+    createFirstViewingChart();
+    createTheatreChart();
+    createFormatChart();
+    createGenreChart();
+    createMonthChart();
 
     jQuery.getJSON(path, function(data) {
         data.sort(function(rowA, rowB) {
