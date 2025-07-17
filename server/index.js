@@ -44,16 +44,18 @@ const pool = process.env.NODE_ENV !== 'test' ? mariadb.createPool({
 async function testConnection() {
   if (process.env.NODE_ENV === 'test') {
     console.log('Skipping database connection test in test environment');
-    return;
+    return { success: true };
   }
   
   let conn;
   try {
     conn = await pool.getConnection();
     console.log('Successfully connected to MariaDB');
+    return { success: true };
   } catch (err) {
     console.error('Database connection failed:', err);
-    process.exit(1);
+    console.log('Server will start but database operations will fail until connection is restored');
+    return { success: false, error: err.message };
   } finally {
     if (conn) conn.release();
   }
@@ -94,6 +96,10 @@ async function getRowsBetweenDates(startDate, endDate) {
     return []; // Return empty array in test environment
   }
   
+  if (!pool) {
+    throw new Error('Database connection not available');
+  }
+  
   let conn;
   try {
     conn = await pool.getConnection();
@@ -103,6 +109,9 @@ async function getRowsBetweenDates(startDate, endDate) {
       [startDate, endDate]
     );
     return rows;
+  } catch (err) {
+    console.error('Database query failed:', err.message);
+    throw new Error('Database connection failed');
   } finally {
     if (conn) conn.release();
   }
@@ -111,6 +120,10 @@ async function getRowsBetweenDates(startDate, endDate) {
 async function checkExistingInfo(imdbID) {
   if (process.env.NODE_ENV === 'test') {
     return []; // Return empty array in test environment
+  }
+  
+  if (!pool) {
+    throw new Error('Database connection not available');
   }
   
   let conn;
@@ -131,6 +144,9 @@ async function checkExistingInfo(imdbID) {
       viewLocation: row.viewLocation,
       movieReview: row.movieReview
     }));
+  } catch (err) {
+    console.error('Database query failed:', err.message);
+    throw new Error('Database connection failed');
   } finally {
     if (conn) conn.release();
   }
@@ -278,6 +294,10 @@ apiRouter.post('/newEntry', requireApiKey, async (req, res) => {
 
     const parsedDate = parseDate(viewingDate, 'MM/dd/yyyy', new Date()).toISOString().split('T')[0];
     
+    if (!pool) {
+      return res.status(503).json({ Error: 'Database connection not available' });
+    }
+    
     conn = await pool.getConnection();
     await conn.query(
       'INSERT INTO movies (movieTitle, viewingDate, movieURL, viewFormat, viewLocation, movieGenre, movieReview, firstViewing) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -287,7 +307,11 @@ apiRouter.post('/newEntry', requireApiKey, async (req, res) => {
     res.json({ OK: 'Success' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ Error: 'Param Error' });
+    if (err.message.includes('Database connection')) {
+      res.status(503).json({ Error: 'Database connection failed' });
+    } else {
+      res.status(500).json({ Error: 'Param Error' });
+    }
   } finally {
     if (conn) conn.release();
   }
@@ -365,11 +389,14 @@ const createServer = () => {
   const port = process.env.SERVER_PORT || 3000;
   
   // Test database connection before starting server
-  testConnection().then(() => {
+  testConnection().then((result) => {
     return app.listen(port, () => {
       console.log(`Server running on port ${port}`);
       console.log('Environment:', process.env.NODE_ENV);
       console.log('Database host:', process.env.MOVIETHING_SQL_HOST);
+      if (!result.success) {
+        console.log('⚠️  Database connection failed at startup. Use /api/health to check status.');
+      }
     });
   }).catch(err => {
     console.error('Failed to start server:', err);
