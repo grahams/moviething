@@ -27,4 +27,7 @@ const mockPool = {
 
 jest.mock('mariadb', () => ({
   createPool: jest.fn(() => mockPool)
-})); 
+}));
+
+// Export mock pool for tests to use
+global.mockPool = mockPool; 

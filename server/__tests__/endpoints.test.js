@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { app } = require('../src/app');
+const { app } = require('../index');
 const mariadb = require('mariadb');
 
 describe('Movie API Endpoints', () => {
@@ -10,7 +10,7 @@ describe('Movie API Endpoints', () => {
       query: jest.fn(),
       release: jest.fn(),
     };
-    mariadb.createPool().getConnection.mockResolvedValue(mockConnection);
+    global.mockPool.getConnection.mockResolvedValue(mockConnection);
   });
 
   afterEach(() => {
@@ -103,6 +103,25 @@ describe('Movie API Endpoints', () => {
         .expect('Content-Disposition', 'attachment; filename=letterboxd.csv');
 
       // Additional CSV content checks could go here
+    });
+  });
+
+  describe('GET /health', () => {
+    it('should return healthy status in test environment', async () => {
+      const response = await request(app)
+        .get('/health')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 'healthy',
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+        environment: 'test',
+        database: {
+          status: 'test_mode',
+          message: 'Database check skipped in test environment'
+        }
+      });
     });
   });
 }); 

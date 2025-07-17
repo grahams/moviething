@@ -1,4 +1,4 @@
-const { getRowsBetweenDates, checkExistingInfo } = require('../src/app');
+const { getRowsBetweenDates, checkExistingInfo } = require('../index');
 const mariadb = require('mariadb');
 
 describe('Helper Functions', () => {
@@ -9,7 +9,7 @@ describe('Helper Functions', () => {
       query: jest.fn(),
       release: jest.fn(),
     };
-    mariadb.createPool().getConnection.mockResolvedValue(mockConnection);
+    global.mockPool.getConnection.mockResolvedValue(mockConnection);
   });
 
   afterEach(() => {
