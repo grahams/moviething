@@ -6,18 +6,25 @@ var monthChart = null;
 
 var year = null;
 var retry = false;
+var allMovieData = [];
+var lastTriedApi = false;
+var loadedYear = null;
+var loadedYears = {};
 
 $(document).ready(function() {
-    var yearQuery = URI(window.location.href).search(true).year;
+    // Set up date pickers to default to current year
+    var now = new Date();
+    var startOfYear = new Date(now.getFullYear(), 0, 1);
+    var endOfYear = new Date(now.getFullYear(), 11, 31);
+    $("#startDate").val(startOfYear.toISOString().slice(0, 10));
+    $("#endDate").val(endOfYear.toISOString().slice(0, 10));
+
+    // Remove year param logic, always use current year for initial data load
     year = mcYear;
+    loadedYears = {};
+    fetchAndApplyRange(year, year, applyDateRangeFilter);
 
-    if(yearQuery) {
-        year = yearQuery.replace("/","");
-    }
-
-    requestData('https://movies.grahams.wtf/moviecharts/data/' + year + '.json');
-
-    $( "#theatreControlButton" ).on( "click", function( event ) {
+    $("#theatreControlButton").on("click", function(event) {
         var data  = theatreChart.series[0].data;
         if(data.length) {
             for(var x = 0; x < data.length; x += 1) {
@@ -29,64 +36,116 @@ $(document).ready(function() {
             }
         }
     });
+
+    // Date filter button handler
+    $("#applyDateFilter").on("click", function() {
+        var startDate = $("#startDate").val();
+        var endDate = $("#endDate").val();
+        var startYear = parseInt(startDate.slice(0,4));
+        var endYear = parseInt(endDate.slice(0,4));
+        fetchAndApplyRange(startYear, endYear, applyDateRangeFilter);
+    });
 });
 
-var requestData = function(path) {
+function fetchAndApplyRange(startYear, endYear, callback) {
+    var yearsToFetch = [];
+    for (var y = startYear; y <= endYear; y++) {
+        if (!loadedYears[y]) yearsToFetch.push(y);
+    }
+    if (yearsToFetch.length === 0) {
+        // All years already loaded
+        allMovieData = [];
+        for (var y = startYear; y <= endYear; y++) {
+            allMovieData = allMovieData.concat(loadedYears[y]);
+        }
+        callback();
+        return;
+    }
+    var fetched = 0;
+    yearsToFetch.forEach(function(y) {
+        requestDataMulti('https://movies.grahams.wtf/moviecharts/data/' + y + '.json', y, function() {
+            fetched++;
+            if (fetched === yearsToFetch.length) {
+                // All fetches done, combine
+                allMovieData = [];
+                for (var yy = startYear; yy <= endYear; yy++) {
+                    allMovieData = allMovieData.concat(loadedYears[yy] || []);
+                }
+                callback();
+            }
+        });
+    });
+}
+
+function requestDataMulti(path, yearForApi, done) {
+    jQuery.getJSON(path, function(data) {
+        data.sort(function(rowA, rowB) {
+            var timeA = new Date(rowA.viewingDate).getTime();
+            var timeB = new Date(rowB.viewingDate).getTime();
+            if (timeA < timeB) return -1;
+            if (timeA > timeB) return 1;
+            return 0;
+        });
+        loadedYears[yearForApi] = data;
+        done();
+    }).fail(function(jqxhr) {
+        if (jqxhr.status === 404 || jqxhr.status === 0 || jqxhr.status === 500) {
+            jQuery.getJSON("https://movies.grahams.wtf/api/?year=" + yearForApi, function(data) {
+                data.sort(function(rowA, rowB) {
+                    var timeA = new Date(rowA.viewingDate).getTime();
+                    var timeB = new Date(rowB.viewingDate).getTime();
+                    if (timeA < timeB) return -1;
+                    if (timeA > timeB) return 1;
+                    return 0;
+                });
+                loadedYears[yearForApi] = data;
+                done();
+            }).fail(function() {
+                loadedYears[yearForApi] = [];
+                done();
+            });
+        } else {
+            loadedYears[yearForApi] = [];
+            done();
+        }
+    });
+}
+
+function applyDateRangeFilter() {
+    // Always recreate charts before updating
     createFirstViewingChart();
     createTheatreChart();
     createFormatChart();
     createGenreChart();
     createMonthChart();
 
-    jQuery.getJSON(path, function(data) {
-        data.sort(function(rowA, rowB) {
-            var timeA = new Date(rowA.viewingDate).getTime();
-            var timeB = new Date(rowB.viewingDate).getTime();
-
-            if (timeA < timeB) {
-                return -1;
-            }
-            if (timeA > timeB) {
-                return 1;
-            }
-
-            return 0;
-        });
-
-        if($("#textStats").length > 0) {
-            prepareTextData(data);
-        }
-
-        if($("#formatContainer").length > 0) {
-            prepareFormatData(data);
-        }
-
-        if($("#theatreContainer").length > 0) {
-            prepareTheatreData(data);
-        }
-
-        if($("#firstViewingContainer").length > 0) {
-            prepareFirstViewingData(data);
-        }
-
-        if($("#genreContainer").length > 0) {
-            prepareGenreData(data);
-        }
-
-        if($("#monthContainer").length > 0) {
-            prepareMonthData(data);
-        }
-
-        if($("#movieListDiv").length > 0) {
-            prepareListData(data);
-        }
-    }).fail(function() {
-        if(!retry) {
-            retry = true;
-            requestData("https://movies.grahams.wtf/api/?year=" + year);
-        }
-    }) 
-};
+    var startDate = $("#startDate").val();
+    var endDate = $("#endDate").val();
+    var titleSearch = $("#titleSearch").val().toLowerCase().trim();
+    
+    var filtered = allMovieData.filter(function(row) {
+        var d = row.viewingDate ? row.viewingDate.slice(0, 10) : null;
+        var dateMatch = d && d >= startDate && d <= endDate;
+        var titleMatch = !titleSearch || (row.movieTitle && row.movieTitle.toLowerCase().includes(titleSearch));
+        return dateMatch && titleMatch;
+    });
+    
+    // Clear previous chart/list data
+    if (formatChart) { formatChart.series[0].setData([]); formatChart.axes[0].setCategories([]); }
+    if (theatreChart) { theatreChart.series[0].setData([]); theatreChart.axes[0].setCategories([]); }
+    if (firstChart) { firstChart.series[0].setData([]); }
+    if (genreChart) { genreChart.series[0].setData([]); genreChart.axes[0].setCategories([]); }
+    if (monthChart) { monthChart.series[0].setData([]); monthChart.axes[0].setCategories([]); }
+    $("#movieList tbody").empty();
+    // Update all UI with filtered data
+    if($("#textStats").length > 0) { prepareTextData(filtered); }
+    if($("#formatContainer").length > 0) { prepareFormatData(filtered); }
+    if($("#theatreContainer").length > 0) { prepareTheatreData(filtered); }
+    if($("#firstViewingContainer").length > 0) { prepareFirstViewingData(filtered); }
+    if($("#genreContainer").length > 0) { prepareGenreData(filtered); }
+    if($("#monthContainer").length > 0) { prepareMonthData(filtered); }
+    if($("#movieListDiv").length > 0) { prepareListData(filtered); }
+}
 
 var countMonth = function(data, month) {
     var monthCount = 0;

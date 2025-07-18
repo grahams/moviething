@@ -28,6 +28,19 @@
                 <a href="/add" class="btn btn-outline-primary">Add New Movie</a>
             </div>
 
+            <!-- Date Range Filter UI -->
+            <div class="mb-3" id="dateRangeFilter">
+                <form class="form-inline">
+                    <label for="startDate" class="mr-2">Start Date:</label>
+                    <input type="date" id="startDate" class="form-control mr-2">
+                    <label for="endDate" class="mr-2">End Date:</label>
+                    <input type="date" id="endDate" class="form-control mr-2">
+                    <label for="titleSearch" class="mr-2">Search Titles:</label>
+                    <input type="text" id="titleSearch" class="form-control mr-2" placeholder="Enter movie title...">
+                    <button type="button" id="applyDateFilter" class="btn btn-primary">Apply Filter</button>
+                </form>
+            </div>
+
             <div id="textStats">
                 <ul>
                 <li>Total # of movies: <span id="textStatsTotal"></span></li>
