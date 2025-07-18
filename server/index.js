@@ -221,9 +221,19 @@ apiRouter.get('/health', async (req, res) => {
 
 // Routes
 apiRouter.get('/', async (req, res) => {
-  const year = req.query.year || new Date().getFullYear().toString();
-  const startDate = `${year}-01-01`;
-  const endDate = `${year}-12-31`;
+  let startDate, endDate;
+  
+  // Support both year parameter (backward compatibility) and date range parameters
+  if (req.query.startDate && req.query.endDate) {
+    // Use explicit date range
+    startDate = req.query.startDate;
+    endDate = req.query.endDate;
+  } else {
+    // Use year parameter (backward compatibility)
+    const year = req.query.year || new Date().getFullYear().toString();
+    startDate = `${year}-01-01`;
+    endDate = `${year}-12-31`;
+  }
   
   try {
     const rows = await getRowsBetweenDates(startDate, endDate);

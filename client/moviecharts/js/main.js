@@ -4,12 +4,21 @@ var firstChart = null;
 var genreChart = null;
 var monthChart = null;
 
-var year = null;
-var retry = false;
 var allMovieData = [];
-var lastTriedApi = false;
-var loadedYear = null;
-var loadedYears = {};
+
+// Dynamic API base URL - detects environment automatically
+var API_BASE_URL = (function() {
+    var hostname = window.location.hostname;
+    var port = window.location.port;
+    
+    // If we're on localhost, use the development server port
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3002';
+    }
+    
+    // For production, use the same hostname and port as the current page
+    return window.location.protocol + '//' + hostname + (port ? ':' + port : '');
+})();
 
 $(document).ready(function() {
     // Set up date pickers to default to current year
@@ -19,10 +28,11 @@ $(document).ready(function() {
     $("#startDate").val(startOfYear.toISOString().slice(0, 10));
     $("#endDate").val(endOfYear.toISOString().slice(0, 10));
 
-    // Remove year param logic, always use current year for initial data load
-    year = mcYear;
-    loadedYears = {};
-    fetchAndApplyRange(year, year, applyDateRangeFilter);
+    // Load initial data for current year using date range API
+    var currentYear = now.getFullYear();
+    var startOfYear = new Date(currentYear, 0, 1).toISOString().slice(0, 10);
+    var endOfYear = new Date(currentYear, 11, 31).toISOString().slice(0, 10);
+    fetchDataForDateRange(startOfYear, endOfYear);
 
     $("#theatreControlButton").on("click", function(event) {
         var data  = theatreChart.series[0].data;
@@ -41,44 +51,16 @@ $(document).ready(function() {
     $("#applyDateFilter").on("click", function() {
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
-        var startYear = parseInt(startDate.slice(0,4));
-        var endYear = parseInt(endDate.slice(0,4));
-        fetchAndApplyRange(startYear, endYear, applyDateRangeFilter);
+        
+        // Use the new date range API
+        fetchDataForDateRange(startDate, endDate);
     });
 });
 
-function fetchAndApplyRange(startYear, endYear, callback) {
-    var yearsToFetch = [];
-    for (var y = startYear; y <= endYear; y++) {
-        if (!loadedYears[y]) yearsToFetch.push(y);
-    }
-    if (yearsToFetch.length === 0) {
-        // All years already loaded
-        allMovieData = [];
-        for (var y = startYear; y <= endYear; y++) {
-            allMovieData = allMovieData.concat(loadedYears[y]);
-        }
-        callback();
-        return;
-    }
-    var fetched = 0;
-    yearsToFetch.forEach(function(y) {
-        requestDataMulti('https://movies.grahams.wtf/moviecharts/data/' + y + '.json', y, function() {
-            fetched++;
-            if (fetched === yearsToFetch.length) {
-                // All fetches done, combine
-                allMovieData = [];
-                for (var yy = startYear; yy <= endYear; yy++) {
-                    allMovieData = allMovieData.concat(loadedYears[yy] || []);
-                }
-                callback();
-            }
-        });
-    });
-}
-
-function requestDataMulti(path, yearForApi, done) {
-    jQuery.getJSON(path, function(data) {
+function fetchDataForDateRange(startDate, endDate) {
+    var url = API_BASE_URL + "/api/?startDate=" + encodeURIComponent(startDate) + "&endDate=" + encodeURIComponent(endDate);
+    
+    jQuery.getJSON(url, function(data) {
         data.sort(function(rowA, rowB) {
             var timeA = new Date(rowA.viewingDate).getTime();
             var timeB = new Date(rowB.viewingDate).getTime();
@@ -86,28 +68,11 @@ function requestDataMulti(path, yearForApi, done) {
             if (timeA > timeB) return 1;
             return 0;
         });
-        loadedYears[yearForApi] = data;
-        done();
-    }).fail(function(jqxhr) {
-        if (jqxhr.status === 404 || jqxhr.status === 0 || jqxhr.status === 500) {
-            jQuery.getJSON("https://movies.grahams.wtf/api/?year=" + yearForApi, function(data) {
-                data.sort(function(rowA, rowB) {
-                    var timeA = new Date(rowA.viewingDate).getTime();
-                    var timeB = new Date(rowB.viewingDate).getTime();
-                    if (timeA < timeB) return -1;
-                    if (timeA > timeB) return 1;
-                    return 0;
-                });
-                loadedYears[yearForApi] = data;
-                done();
-            }).fail(function() {
-                loadedYears[yearForApi] = [];
-                done();
-            });
-        } else {
-            loadedYears[yearForApi] = [];
-            done();
-        }
+        allMovieData = data;
+        applyDateRangeFilter();
+    }).fail(function() {
+        allMovieData = [];
+        applyDateRangeFilter();
     });
 }
 

@@ -1,6 +1,16 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000/api'
-    : '/api';
+// Dynamic API base URL - detects environment automatically
+const API_BASE_URL = (function() {
+    var hostname = window.location.hostname;
+    var port = window.location.port;
+    
+    // If we're on localhost, use the development server port
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3002/api';
+    }
+    
+    // For production, use the same hostname and port as the current page
+    return window.location.protocol + '//' + hostname + (port ? ':' + port : '') + '/api';
+})();
 
 var theatreNames = [
     "Brattle Theatre",
