@@ -55,6 +55,45 @@ $(document).ready(function() {
         // Use the new date range API
         fetchDataForDateRange(startDate, endDate);
     });
+
+    // Prevent form submission on Enter key and apply filter instead
+    $("#dateRangeFilter form").on("submit", function(e) {
+        e.preventDefault();
+        var startDate = $("#startDate").val();
+        var endDate = $("#endDate").val();
+        fetchDataForDateRange(startDate, endDate);
+    });
+
+    // Also handle Enter key specifically on the title search field
+    $("#titleSearch").on("keypress", function(e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            var startDate = $("#startDate").val();
+            var endDate = $("#endDate").val();
+            fetchDataForDateRange(startDate, endDate);
+        }
+    });
+
+    // Apply title search filter as you type (with debouncing)
+    var titleSearchTimeout;
+    $("#titleSearch").on("input", function() {
+        clearTimeout(titleSearchTimeout);
+        titleSearchTimeout = setTimeout(function() {
+            applyDateRangeFilter(); // Just reapply the filter with current data
+        }, 300); // 300ms delay
+    });
+
+    // Add visual feedback for the apply filter button
+    $("#applyDateFilter").on("click", function() {
+        var $btn = $(this);
+        var originalText = $btn.text();
+        $btn.text("Applying...").prop("disabled", true);
+        
+        // Reset button after a short delay
+        setTimeout(function() {
+            $btn.text(originalText).prop("disabled", false);
+        }, 1000);
+    });
 });
 
 function fetchDataForDateRange(startDate, endDate) {
