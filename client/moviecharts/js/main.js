@@ -94,6 +94,12 @@ $(document).ready(function() {
             $btn.text(originalText).prop("disabled", false);
         }, 1000);
     });
+
+    // Set start date to 2003-01-01 when the button is clicked
+    $("#setStart2003").on("click", function() {
+        $("#startDate").val("2003-01-01");
+        $("#applyDateFilter").click();
+    });
 });
 
 function fetchDataForDateRange(startDate, endDate) {
@@ -496,8 +502,14 @@ var prepareListData = function(data) {
         titleCell.append(link);
 
         var reviewCell = $("<td />").text(row.movieReview);
+        var viewingDateCell = $("<td />").addClass("viewing-date-cell").text(row.viewingDate ? row.viewingDate.slice(0, 10) : "");
+        var locationCell = $("<td />").addClass("location-cell").text(row.viewLocation || "");
 
-        var row = $("<tr />").append(titleCell).append(reviewCell);
+        var row = $("<tr />")
+            .append(titleCell)
+            .append(reviewCell)
+            .append(viewingDateCell)
+            .append(locationCell);
         $("#movieList tbody").append(row);
     });
 };
