@@ -5,6 +5,8 @@ var genreChart = null;
 var monthChart = null;
 
 var allMovieData = [];
+var allDataLoaded = false; // Track if all data is loaded
+var backgroundLoading = false; // Track if background loading is in progress
 
 // Dynamic API base URL - detects environment automatically
 var API_BASE_URL = (function() {
@@ -23,16 +25,14 @@ var API_BASE_URL = (function() {
 $(document).ready(function() {
     // Set up date pickers to default to current year
     var now = new Date();
-    var startOfYear = new Date(now.getFullYear(), 0, 1);
-    var endOfYear = new Date(now.getFullYear(), 11, 31);
-    $("#startDate").val(startOfYear.toISOString().slice(0, 10));
-    $("#endDate").val(endOfYear.toISOString().slice(0, 10));
+    var startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    var endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+    $("#startDate").val(startOfYear);
+    $("#endDate").val(endOfYear);
 
     // Load initial data for current year using date range API
     var currentYear = now.getFullYear();
-    var startOfYear = new Date(currentYear, 0, 1).toISOString().slice(0, 10);
-    var endOfYear = new Date(currentYear, 11, 31).toISOString().slice(0, 10);
-    fetchDataForDateRange(startOfYear, endOfYear);
+    fetchDataForDateRange(startOfYear, endOfYear, true); // true = initial load
 
     $("#theatreControlButton").on("click", function(event) {
         var data  = theatreChart.series[0].data;
@@ -51,9 +51,11 @@ $(document).ready(function() {
     $("#applyDateFilter").on("click", function() {
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
-        
-        // Use the new date range API
-        fetchDataForDateRange(startDate, endDate);
+        if (allDataLoaded) {
+            applyDateRangeFilter();
+        } else {
+            fetchDataForDateRange(startDate, endDate, false);
+        }
     });
 
     // Prevent form submission on Enter key and apply filter instead
@@ -61,16 +63,24 @@ $(document).ready(function() {
         e.preventDefault();
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
-        fetchDataForDateRange(startDate, endDate);
+        if (allDataLoaded) {
+            applyDateRangeFilter();
+        } else {
+            fetchDataForDateRange(startDate, endDate, false);
+        }
     });
 
     // Also handle Enter key specifically on the title search field
-    $("#titleSearch").on("keypress", function(e) {
+    $(".filter-input").on("keypress", function(e) {
         if (e.which === 13) { // Enter key
             e.preventDefault();
             var startDate = $("#startDate").val();
             var endDate = $("#endDate").val();
-            fetchDataForDateRange(startDate, endDate);
+            if (allDataLoaded) {
+                applyDateRangeFilter();
+            } else {
+                fetchDataForDateRange(startDate, endDate, false);
+            }
         }
     });
 
@@ -88,8 +98,6 @@ $(document).ready(function() {
         var $btn = $(this);
         var originalText = $btn.text();
         $btn.text("Applying...").prop("disabled", true);
-        
-        // Reset button after a short delay
         setTimeout(function() {
             $btn.text(originalText).prop("disabled", false);
         }, 1000);
@@ -102,9 +110,14 @@ $(document).ready(function() {
     });
 });
 
-function fetchDataForDateRange(startDate, endDate) {
+// Fetches data for a date range. If initialLoad is true, triggers background fetch for all data.
+function fetchDataForDateRange(startDate, endDate, initialLoad) {
+    // If all data is loaded, just filter client-side
+    if (allDataLoaded) {
+        applyDateRangeFilter();
+        return;
+    }
     var url = API_BASE_URL + "/api/?startDate=" + encodeURIComponent(startDate) + "&endDate=" + encodeURIComponent(endDate);
-    
     jQuery.getJSON(url, function(data) {
         data.sort(function(rowA, rowB) {
             var timeA = new Date(rowA.viewingDate).getTime();
@@ -115,9 +128,48 @@ function fetchDataForDateRange(startDate, endDate) {
         });
         allMovieData = data;
         applyDateRangeFilter();
+        // If this is the initial load, start background fetch for all data
+        if (initialLoad) {
+            fetchAllDataInBackground(startDate);
+        }
     }).fail(function() {
         allMovieData = [];
         applyDateRangeFilter();
+    });
+}
+
+// Background fetch for all data from 2003-01-01 to the day before the current year
+function fetchAllDataInBackground(currentYearStart) {
+    if (backgroundLoading || allDataLoaded) return;
+    backgroundLoading = true;
+    var url = API_BASE_URL + "/api/?startDate=2003-01-01&endDate=" + encodeURIComponent(new Date(new Date(currentYearStart).getTime() - 86400000).toISOString().slice(0, 10));
+    jQuery.getJSON(url, function(data) {
+        // Merge and deduplicate data
+        var merged = allMovieData.concat(data);
+        // Deduplicate by a unique key (movieTitle + viewingDate + viewLocation)
+        var seen = {};
+        var deduped = [];
+        merged.forEach(function(row) {
+            var key = (row.movieTitle || "") + "|" + (row.viewingDate || "") + "|" + (row.viewLocation || "");
+            if (!seen[key]) {
+                seen[key] = true;
+                deduped.push(row);
+            }
+        });
+        deduped.sort(function(rowA, rowB) {
+            var timeA = new Date(rowA.viewingDate).getTime();
+            var timeB = new Date(rowB.viewingDate).getTime();
+            if (timeA < timeB) return -1;
+            if (timeA > timeB) return 1;
+            return 0;
+        });
+        allMovieData = deduped;
+        allDataLoaded = true;
+        backgroundLoading = false;
+        applyDateRangeFilter();
+    }).fail(function() {
+        backgroundLoading = false;
+        // Optionally, could retry or show a message
     });
 }
 
@@ -502,14 +554,8 @@ var prepareListData = function(data) {
         titleCell.append(link);
 
         var reviewCell = $("<td />").text(row.movieReview);
-        var viewingDateCell = $("<td />").addClass("viewing-date-cell").text(row.viewingDate ? row.viewingDate.slice(0, 10) : "");
-        var locationCell = $("<td />").addClass("location-cell").text(row.viewLocation || "");
 
-        var row = $("<tr />")
-            .append(titleCell)
-            .append(reviewCell)
-            .append(viewingDateCell)
-            .append(locationCell);
+        var row = $("<tr />").append(titleCell).append(reviewCell);
         $("#movieList tbody").append(row);
     });
 };
