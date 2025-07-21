@@ -539,23 +539,23 @@ var prepareMonthData = function(data) {
 var prepareListData = function(data) {
     data.forEach(function(row) {
         var title = row.movieTitle;
-
         if(row.movieGenre === "Short") {
             title = "Short: " + title;
         }
-
         var titleCell = $("<td />");
-        var link = $("<a />", { 'href': row.movieURL, 
-                                'text': title });
-
+        var link = $("<a />", { 'href': row.movieURL, 'text': title });
         if(row.firstViewing !== 1) {
             link.css("font-style", "italic");
         }
         titleCell.append(link);
-
         var reviewCell = $("<td />").text(row.movieReview);
-
-        var row = $("<tr />").append(titleCell).append(reviewCell);
-        $("#movieList tbody").append(row);
+        var viewingDateCell = $("<td />").addClass("viewing-date-cell").text(row.viewingDate ? row.viewingDate.slice(0, 10) : "");
+        var locationCell = $("<td />").addClass("location-cell").text(row.viewLocation || "");
+        var rowElem = $("<tr />")
+            .append(titleCell)
+            .append(reviewCell)
+            .append(viewingDateCell)
+            .append(locationCell);
+        $("#movieList tbody").append(rowElem);
     });
 };
