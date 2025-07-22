@@ -19,7 +19,8 @@ var API_BASE_URL = (function() {
     }
     
     // For production, use the same hostname and port as the current page
-    return window.location.protocol + '//' + hostname + (port ? ':' + port : '');
+    //return window.location.protocol + '//' + hostname + (port ? ':' + port : '');
+    return 'https://movies.grahams.wtf/';
 })();
 
 $(document).ready(function() {
