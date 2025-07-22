@@ -7,6 +7,7 @@ var monthChart = null;
 var allMovieData = [];
 var allDataLoaded = false; // Track if all data is loaded
 var backgroundLoading = false; // Track if background loading is in progress
+var initialYear = null;
 
 // Dynamic API base URL - detects environment automatically
 var API_BASE_URL = (function() {
@@ -26,8 +27,13 @@ var API_BASE_URL = (function() {
 $(document).ready(function() {
     // Set up date pickers to default to current year
     var now = new Date();
-    var startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-    var endOfYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+    if(!initialYear) {
+        var now = new Date();
+        initialYear = now.getFullYear();
+    }
+
+    var startOfYear = new Date(initialYear, 0, 1).toISOString().slice(0, 10);
+    var endOfYear = new Date(initialYear, 11, 31).toISOString().slice(0, 10);
     $("#startDate").val(startOfYear);
     $("#endDate").val(endOfYear);
 
