@@ -9,6 +9,12 @@ var allDataLoaded = false; // Track if all data is loaded
 var backgroundLoading = false; // Track if background loading is in progress
 var initialYear = null;
 
+// Helper to get query parameter from URL
+function getQueryParam(name) {
+    var match = window.location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
 // Dynamic API base URL - detects environment automatically
 var API_BASE_URL = (function() {
     var hostname = window.location.hostname;
@@ -25,10 +31,13 @@ var API_BASE_URL = (function() {
 })();
 
 $(document).ready(function() {
-    // Set up date pickers to default to current year
+    // Set up date pickers to default to current year or URL param
     var now = new Date();
+    var urlYear = parseInt(getQueryParam('initialYear'), 10);
+    if (!isNaN(urlYear) && urlYear > 1900 && urlYear < 3000) {
+        initialYear = urlYear;
+    }
     if(!initialYear) {
-        var now = new Date();
         initialYear = now.getFullYear();
     }
 
