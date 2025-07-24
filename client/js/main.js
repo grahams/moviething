@@ -30,7 +30,259 @@ var API_BASE_URL = (function() {
     return 'https://movies.grahams.wtf/';
 })();
 
+// Highcharts dark mode theme
+var highchartsDarkTheme = {
+    chart: {
+        backgroundColor: 'transparent',
+        style: {
+            color: '#fff'
+        }
+    },
+    title: {
+        style: {
+            color: '#fff',
+            fontWeight: 'bold'
+        }
+    },
+    subtitle: {
+        style: {
+            color: '#fff'
+        }
+    },
+    xAxis: {
+        labels: {
+            style: {
+                color: '#fff'
+            }
+        },
+        title: {
+            style: {
+                color: '#fff'
+            }
+        },
+        gridLineColor: '#444'
+    },
+    yAxis: {
+        labels: {
+            style: {
+                color: '#fff'
+            }
+        },
+        title: {
+            style: {
+                color: '#fff'
+            }
+        },
+        gridLineColor: '#444'
+    },
+    legend: {
+        itemStyle: {
+            color: '#fff'
+        },
+        itemHoverStyle: {
+            color: '#ddd'
+        }
+    },
+    tooltip: {
+        backgroundColor: '#222',
+        style: {
+            color: '#fff'
+        }
+    },
+    credits: {
+        style: {
+            color: '#666'
+        }
+    },
+    plotOptions: {
+        series: {
+            dataLabels: {
+                color: '#fff'
+            }
+        }
+    },
+    navigation: {
+        buttonOptions: {
+            symbolStroke: '#fff',
+            theme: {
+                fill: '#222',
+                stroke: '#444',
+                style: {
+                    color: '#fff'
+                },
+                states: {
+                    hover: {
+                        fill: '#333',
+                        style: { color: '#fff' }
+                    },
+                    select: {
+                        fill: '#111',
+                        style: { color: '#fff' }
+                    }
+                }
+            }
+        }
+    },
+    exporting: {
+        menuItemHoverStyle: {
+            background: '#333',
+            color: '#fff'
+        },
+        menuItemStyle: {
+            background: '#222',
+            color: '#fff'
+        },
+        menuStyle: {
+            background: '#222',
+            color: '#fff',
+            border: '1px solid #444'
+        }
+    }
+};
+
+var highchartsLightTheme = {
+    chart: {
+        backgroundColor: null,
+        style: {
+            color: '#333'
+        }
+    },
+    title: {
+        style: {
+            color: '#333',
+            fontWeight: 'bold'
+        }
+    },
+    subtitle: {
+        style: {
+            color: '#333'
+        }
+    },
+    xAxis: {
+        labels: {
+            style: {
+                color: '#333'
+            }
+        },
+        title: {
+            style: {
+                color: '#333'
+            }
+        },
+        gridLineColor: '#eee'
+    },
+    yAxis: {
+        labels: {
+            style: {
+                color: '#333'
+            }
+        },
+        title: {
+            style: {
+                color: '#333'
+            }
+        },
+        gridLineColor: '#eee'
+    },
+    legend: {
+        itemStyle: {
+            color: '#333'
+        },
+        itemHoverStyle: {
+            color: '#000'
+        }
+    },
+    tooltip: {
+        backgroundColor: '#fff',
+        style: {
+            color: '#333'
+        }
+    },
+    credits: {
+        style: {
+            color: '#999'
+        }
+    },
+    plotOptions: {
+        series: {
+            dataLabels: {
+                color: '#333'
+            }
+        }
+    },
+    navigation: {
+        buttonOptions: {
+            symbolStroke: '#333',
+            theme: {
+                fill: '#fff',
+                stroke: '#ccc',
+                style: {
+                    color: '#333'
+                },
+                states: {
+                    hover: {
+                        fill: '#eee',
+                        style: { color: '#333' }
+                    },
+                    select: {
+                        fill: '#ddd',
+                        style: { color: '#333' }
+                    }
+                }
+            }
+        }
+    },
+    exporting: {
+        menuItemHoverStyle: {
+            background: '#eee',
+            color: '#333'
+        },
+        menuItemStyle: {
+            background: '#fff',
+            color: '#333'
+        },
+        menuStyle: {
+            background: '#fff',
+            color: '#333',
+            border: '1px solid #ccc'
+        }
+    }
+};
+
+function applyHighchartsTheme(isDark) {
+    if (isDark) {
+        Highcharts.setOptions(highchartsDarkTheme);
+    } else {
+        Highcharts.setOptions(highchartsLightTheme);
+    }
+}
+
+function isDarkModeActive() {
+    return $("body").hasClass("dark-mode");
+}
+
+function redrawAllCharts() {
+    // Recreate all charts with current filtered data
+    applyDateRangeFilter();
+}
+
 $(document).ready(function() {
+    // Hide filter controls or dark mode button based on URL params
+    var hideFilters = getQueryParam('hideFilters') === 'true';
+    var hideDarkMode = getQueryParam('hideDarkMode') === 'true';
+    if (hideFilters) {
+        $('#dateRangeFilter').hide();
+        // Optionally hide the add button and theatre control if you want all controls gone:
+        $('.mb-3:has(#setStart2003), .mb-3:has(#applyDateFilter), #theatreControlContainer').hide();
+    }
+    if (hideDarkMode) {
+        $('#toggleDarkMode').hide();
+    }
+    var hideAddButton = getQueryParam('hideAddButton') === 'true';
+    if (hideAddButton) {
+        $("a[href='/add']").hide();
+    }
+
     // Set up date pickers to default to current year or URL param
     var now = new Date();
     var urlYear = parseInt(getQueryParam('initialYear'), 10);
@@ -123,6 +375,33 @@ $(document).ready(function() {
     $("#setStart2003").on("click", function() {
         $("#startDate").val("2003-01-01");
         $("#applyDateFilter").click();
+    });
+
+    // Restore dark mode state from localStorage or system preference
+    var darkPref = localStorage.getItem('darkMode');
+    if (darkPref === 'true') {
+        $('body').addClass('dark-mode');
+    } else if (darkPref === 'false') {
+        $('body').removeClass('dark-mode');
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        $('body').addClass('dark-mode');
+    }
+
+    // Apply Highcharts theme on load
+    applyHighchartsTheme(isDarkModeActive());
+
+    $("#toggleDarkMode").on("click", function() {
+        var isDark = $("body").hasClass("dark-mode");
+        if (isDark) {
+            $("body").removeClass("dark-mode");
+            localStorage.setItem('darkMode', 'false');
+        } else {
+            $("body").addClass("dark-mode");
+            localStorage.setItem('darkMode', 'true');
+        }
+        // Apply Highcharts theme and redraw charts
+        applyHighchartsTheme(!isDark);
+        redrawAllCharts();
     });
 });
 
@@ -242,13 +521,15 @@ var createPieChart = function(container, title, seriesName) {
         chart: {
             renderTo: container,
             height: 600,
-            type: 'pie'
+            type: 'pie',
+            backgroundColor: null // Use theme
         },
         credits: {
             enabled: false
         },
         title: {
-            text: title
+            text: title,
+            backgroundColor: null // Use theme
         },
         xAxis: {
         },
@@ -331,7 +612,8 @@ var createMonthChart = function () {
         monthChart = new Highcharts.Chart({
             chart: {
                 renderTo: "monthContainer",
-                type: 'bar'
+                type: 'bar',
+                backgroundColor: null // Use theme
             },
             title: {
                 text: "Movies by Month"
