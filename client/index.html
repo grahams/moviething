@@ -26,7 +26,7 @@
         <!-- Add your site or application content here -->
         <div class="container p-2">
             <div class="mb-3">
-                <a href="/add" class="btn btn-outline-primary">Add New Movie</a>
+                <a href="/add" id="addMovieButton" class="btn btn-outline-primary">Add New Movie</a>
             </div>
 
             <!-- Date Range Filter UI -->
@@ -123,8 +123,31 @@
 
         <script>
             var mcYear = "" + new Date().getFullYear();
-            // Show/hide clear button and clear input on click
+            
+            // URL parameter control for UI elements
             $(function() {
+                // Parse URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Control dark mode toggle button visibility
+                const showDarkModeButton = urlParams.get('showDarkModeButton');
+                if (showDarkModeButton === 'false') {
+                    $('#toggleDarkMode').hide();
+                }
+                
+                // Control add new movie button visibility
+                const showAddButton = urlParams.get('showAddButton');
+                if (showAddButton === 'false') {
+                    $('#addMovieButton').hide();
+                }
+                
+                // Control filter controls visibility
+                const showFilterControls = urlParams.get('showFilterControls');
+                if (showFilterControls === 'false') {
+                    $('#dateRangeFilter').hide();
+                }
+                
+                // Show/hide clear button and clear input on click
                 var $input = $('#titleSearch');
                 var $clear = $('#clearTitleSearch');
                 function toggleClear() {
