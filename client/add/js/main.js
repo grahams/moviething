@@ -109,9 +109,6 @@ $(document).ready(function() {
         localStorage.setItem("moviesAPIKey", $("#apiKey").val());
     })
 
-    $("#searchName").on("change", function(e) {
-        searchMovie($("#searchName").val().toTitleCase());
-    })
 
     // Add keyup event for real-time search
     $("#searchName").on("keyup", function(e) {
