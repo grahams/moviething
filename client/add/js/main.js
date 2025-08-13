@@ -99,6 +99,16 @@ var viewConfig = [
 ];
 
 $(document).ready(function() {
+    // Apply dark mode based on saved preference or system default
+    var darkPref = localStorage.getItem('darkMode');
+    if (darkPref === 'true') {
+        $('body').addClass('dark-mode');
+    } else if (darkPref === 'false') {
+        $('body').removeClass('dark-mode');
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        $('body').addClass('dark-mode');
+    }
+
     var apiKey = localStorage.getItem("moviesAPIKey");
 
     if(apiKey) {
