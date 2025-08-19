@@ -657,8 +657,28 @@ var prepareTextData = function(data) {
     $("#textStatsShorts").html(shortCount);
 };
 
+var mergeData = function(data, totals, key, mergeNames, mergeTarget) {
+    data.forEach(function(row){ 
+        if(mergeNames[row[key]] === true) {
+            if(totals[mergeTarget] === undefined) {
+                totals[mergeTarget] = 1;
+            }
+            else {
+                totals[mergeTarget] += 1;
+            }
+        }
+        else {
+            if(totals[row[key]] === undefined) {
+                totals[row[key]] = 1;
+            }
+            else {
+                totals[row[key]] += 1;
+            }
+        }
+    });
+};
 
-var countByWithOther = function(data, key, chart) {
+var countByWithOther = function(data, key, chart, mergeNames, mergeTarget) {
     var categories = [];
 
     var otherThreshold = 3;
@@ -668,15 +688,7 @@ var countByWithOther = function(data, key, chart) {
 
     var totals = {};
 
-    data.forEach(function(row){ 
-        var k = row[key];
-        if(totals[k] === undefined) {
-            totals[k] = 1;
-        }
-        else {
-            totals[k] += 1;
-        }
-    });
+    mergeData(data, totals, key, mergeNames, mergeTarget);
 
     // Pull out the location data
     for(var v in totals) {
@@ -709,86 +721,61 @@ var countByWithOther = function(data, key, chart) {
 };
 
 var prepareTheatreData = function(data) {
-    var theatreCategories = [];
-
-    // Folds theatres below a number of visits into a 'Other' category
-    var theatreOtherTarget = "Other";
-    var theatreOtherThreshold = 3;
-    var theatreOtherNames = [];
-    var theatreOtherValues = [];
-    var theatreOtherCount = 0;
-
     // Folds several 'locations' into 'Home'
-    var theatreCollapseTarget = "Home";
-    var theatreCollapseCount = 0;
-    var theatreCollapseNames = {"Home": true,
-                                "Camp Awesome": true,
-                                "Rochester": true,
-                                "Hopatcong": true,
-                                "McWeavers": true,
-                                "Michigan": true,
-                                "jwm's house": true,
-                                "Virginia": true,
-                                "Gualala": true,
-                                "Puerto Rico": true,
-                                "Airplane": true,
-                                "Hampton Beach": true};
+    var theatreMergeTarget = "Home";
+    var theatreMergeNames = { "Home": true,
+                              "Camp Awesome": true,
+                              "Rochester": true,
+                              "Hopatcong": true,
+                              "McWeavers": true,
+                              "Michigan": true,
+                              "jwm's house": true,
+                              "Virginia": true,
+                              "Gualala": true,
+                              "Cleveland": true,
+                              "Puerto Rico": true,
+                              "Airplane": true,
+                              "Hampton Beach": true};
 
     // Compute theatre totals
     var theatreTotals = {};
-    theatreTotals[theatreCollapseTarget] = 0;
+    theatreTotals[theatreMergeTarget] = 0;
 
-    data.forEach(function(row){ 
-        if(theatreCollapseNames[row.viewLocation] === true) {
-            theatreCollapseCount += 1;
-            theatreTotals[theatreCollapseTarget] += 1;
-        }
-        else {
-            if(theatreTotals[row.viewLocation] === undefined) {
-                theatreTotals[row.viewLocation] = 1;
-            }
-            else {
-                theatreTotals[row.viewLocation] += 1;
-            }
-        }
-    });
-
-    // Pull out the location data
-    for(var theatre in theatreTotals) {
-        if(theatreTotals[theatre] <= theatreOtherThreshold) {
-            theatreOtherCount += theatreTotals[theatre];
-            theatreOtherNames.push(theatre);
-            theatreOtherValues.push(theatreTotals[theatre]);
-            delete theatreTotals[theatre];
-        }
-        else {
-            theatreChart.series[0].addPoint({
-                name: theatre,
-                y: theatreTotals[theatre]
-            }, true);
-            theatreCategories.push(theatre);
-        }
-    }
-
-    if(theatreOtherCount > 0) {
-        theatreChart.series[0].addPoint({
-            name: "Other",
-            y: theatreOtherCount
-        }, true);
-        theatreCategories.push("Other");
-    }
-
-    theatreChart.axes[0].setCategories(theatreCategories);
-    theatreChart.otherNames = theatreOtherNames;
-    theatreChart.otherValues = theatreOtherValues;
+    countByWithOther(data, "viewLocation", theatreChart, theatreMergeNames, theatreMergeTarget);
 };
 
 var prepareFormatData = function(data) {
-    countByWithOther(data, "viewFormat", formatChart);
+    // Folds several 'locations' into 'Home'
+    var streamingMergeTarget = "Streaming";
+    var streamingMergeNames = { "Apple TV": true,
+                                "Netflix": true,
+                                "Download": true,
+                                "Youtube": true,
+                                "Xbox Streaming": true,
+                                "Screening": true,
+                                "HD Download": true,
+                                "Amazon Instant": true,
+                                "Netflix Streaming": true,
+                                "iTunes Streaming": true,
+                                "iPad": true,
+                                "Amazon Unbox": true,
+                                "Amazon Prime": true,
+                                "Hulu": true,
+                                "Xbox": true,
+                                "Streaming": true,
+                                "Disney+": true,
+                                "iTunes (iPad)": true,
+                                "Google Play": true }
+
+    // Compute streaming totals
+    var streamingTotals = {};
+    streamingTotals[streamingMergeTarget] = 0;
+
+    countByWithOther(data, "viewFormat", formatChart, streamingMergeNames, streamingMergeTarget);
 };
 
 var prepareGenreData = function(data) {
-    countByWithOther(data, "movieGenre", genreChart);
+    countByWithOther(data, "movieGenre", genreChart, {}, "none");
 };
 
 var prepareFirstViewingData = function(data) {
@@ -819,14 +806,7 @@ var prepareMonthData = function(data) {
     var monthCategories = [];
 
     for(var x = 0; x < 12; x += 1) {
-        /*
-        monthChart.series[0].addPoint({
-            name: moment().month(x).format("MMMM"),
-            y: countMonth(data, x)
-        }, true);
-        */
         monthChart.series[0].addPoint(countMonth(data,x));
-
 
         monthCategories.push(moment().month(x).format("MMM"));
     }
