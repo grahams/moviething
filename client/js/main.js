@@ -657,17 +657,24 @@ var prepareTextData = function(data) {
     $("#textStatsShorts").html(shortCount);
 };
 
-var mergeData = function(data, totals, key, mergeNames, mergeTarget) {
+var mergeData = function(data, totals, key, mergeRules) {
     data.forEach(function(row){ 
-        if(mergeNames[row[key]] === true) {
-            if(totals[mergeTarget] === undefined) {
-                totals[mergeTarget] = 1;
-            }
-            else {
-                totals[mergeTarget] += 1;
+        var found = false;
+
+        for(var rule in mergeRules) {
+            if(mergeRules[rule].names[row[key]] === true) {
+                if(totals[mergeRules[rule].target] === undefined) {
+                    totals[mergeRules[rule].target] = 1;
+                }
+                else {
+                    totals[mergeRules[rule].target] += 1;
+                }
+                found = true;
+                break;
             }
         }
-        else {
+
+        if(!found) {
             if(totals[row[key]] === undefined) {
                 totals[row[key]] = 1;
             }
@@ -678,7 +685,7 @@ var mergeData = function(data, totals, key, mergeNames, mergeTarget) {
     });
 };
 
-var countByWithOther = function(data, key, chart, mergeNames, mergeTarget) {
+var countByWithOther = function(data, key, chart, mergeRules) {
     var categories = [];
 
     var otherThreshold = 3;
@@ -688,7 +695,7 @@ var countByWithOther = function(data, key, chart, mergeNames, mergeTarget) {
 
     var totals = {};
 
-    mergeData(data, totals, key, mergeNames, mergeTarget);
+    mergeData(data, totals, key, mergeRules);
 
     // Pull out the location data
     for(var v in totals) {
@@ -708,6 +715,26 @@ var countByWithOther = function(data, key, chart, mergeNames, mergeTarget) {
     }
 
     if(otherCount > 0) {
+        // Check if "Other" point already exists
+        var existingOtherCount = 0;
+        var existingOtherIndex = -1;
+        
+        for(var i = 0; i < chart.series[0].points.length; i++) {
+            if(chart.series[0].points[i].name === "Other") {
+                existingOtherCount = chart.series[0].points[i].y;
+                existingOtherIndex = i;
+                break;
+            }
+        }
+        
+        if(existingOtherIndex > -1) {
+            otherCount += existingOtherCount;
+            chart.series[0].removePoint(existingOtherIndex);
+            otherNames.push("Other");
+            otherValues.push(existingOtherCount);
+        }
+
+        // Create new "Other" point
         chart.series[0].addPoint({
             name: "Other",
             y: otherCount
@@ -722,60 +749,92 @@ var countByWithOther = function(data, key, chart, mergeNames, mergeTarget) {
 
 var prepareTheatreData = function(data) {
     // Folds several 'locations' into 'Home'
-    var theatreMergeTarget = "Home";
-    var theatreMergeNames = { "Home": true,
-                              "Camp Awesome": true,
-                              "Rochester": true,
-                              "Hopatcong": true,
-                              "McWeavers": true,
-                              "Michigan": true,
-                              "jwm's house": true,
-                              "Virginia": true,
-                              "Gualala": true,
-                              "Cleveland": true,
-                              "Puerto Rico": true,
-                              "Airplane": true,
-                              "Hampton Beach": true};
 
-    // Compute theatre totals
-    var theatreTotals = {};
-    theatreTotals[theatreMergeTarget] = 0;
+    var mergeRules = [
+        {
+            target: "Home",
+            names: {   
+                    "Home": true,
+                    "Camp Awesome": true,
+                    "Rochester": true,
+                    "Hopatcong": true,
+                    "McWeavers": true,
+                    "Michigan": true,
+                    "jwm's house": true,
+                    "Virginia": true,
+                    "Gualala": true,
+                    "Cleveland": true,
+                    "Puerto Rico": true,
+                    "Airplane": true,
+                    "Hampton Beach": true
+            }
+        }
+    ]
 
-    countByWithOther(data, "viewLocation", theatreChart, theatreMergeNames, theatreMergeTarget);
+    countByWithOther(data, "viewLocation", theatreChart, mergeRules);
 };
 
 var prepareFormatData = function(data) {
-    // Folds several 'locations' into 'Home'
-    var streamingMergeTarget = "Streaming";
-    var streamingMergeNames = { "Apple TV": true,
-                                "Netflix": true,
-                                "Download": true,
-                                "Youtube": true,
-                                "Xbox Streaming": true,
-                                "Screening": true,
-                                "HD Download": true,
-                                "Amazon Instant": true,
-                                "Netflix Streaming": true,
-                                "iTunes Streaming": true,
-                                "iPad": true,
-                                "Amazon Unbox": true,
-                                "Amazon Prime": true,
-                                "Hulu": true,
-                                "Xbox": true,
-                                "Streaming": true,
-                                "Disney+": true,
-                                "iTunes (iPad)": true,
-                                "Google Play": true }
+    var mergeRules = [
+        {
+            target: "Streaming",
+            names: {
+                "Apple TV": true,
+                "Netflix": true,
+                "Download": true,
+                "Youtube": true,
+                "Xbox Streaming": true,
+                "Screening": true,
+                "HD Download": true,
+                "Amazon Instant": true,
+                "Netflix Streaming": true,
+                "iTunes Streaming": true,
+                "iPad": true,
+                "Amazon Unbox": true,
+                "Amazon Prime": true,
+                "Hulu": true,
+                "Xbox": true,
+                "Streaming": true,
+                "Disney+": true,
+                "iTunes (iPad)": true,
+                "Qello": true,
+                "Google Play": true
+            }
+        },
+        {
+            target: "Physical",
+            names: {
+                "Bluray": true,
+                "Blu-ray": true,
+                "VCD": true,
+                "CD": true,
+                "DVD": true,
+                "VHS": true,
+            }
+        },
+        {
+            target: "TV/Cable",
+            names: {
+                "TV": true,
+                "On Demand": true
+            }
+        },
+        {
+            target: "Theater",
+            names: {
+                "Theater": true,
+                "Theatre": true,
+                "IMAX": true,
+                "IFFBoston": true
+            }
+        }
+    ]
 
-    // Compute streaming totals
-    var streamingTotals = {};
-    streamingTotals[streamingMergeTarget] = 0;
-
-    countByWithOther(data, "viewFormat", formatChart, streamingMergeNames, streamingMergeTarget);
+    countByWithOther(data, "viewFormat", formatChart, mergeRules);
 };
 
 var prepareGenreData = function(data) {
-    countByWithOther(data, "movieGenre", genreChart, {}, "none");
+    countByWithOther(data, "movieGenre", genreChart, null);
 };
 
 var prepareFirstViewingData = function(data) {
