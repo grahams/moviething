@@ -662,7 +662,7 @@ var mergeData = function(data, totals, key, mergeRules) {
         var found = false;
 
         for(var rule in mergeRules) {
-            if(mergeRules[rule].names[row[key]] === true) {
+            if(mergeRules[rule].names[row[key].toLowerCase()] === true) {
                 if(totals[mergeRules[rule].target] === undefined) {
                     totals[mergeRules[rule].target] = 1;
                 }
@@ -749,89 +749,11 @@ var countByWithOther = function(data, key, chart, mergeRules) {
 
 var prepareTheatreData = function(data) {
     // Folds several 'locations' into 'Home'
-
-    var mergeRules = [
-        {
-            target: "Home",
-            names: {   
-                    "Home": true,
-                    "Camp Awesome": true,
-                    "Rochester": true,
-                    "Hopatcong": true,
-                    "McWeavers": true,
-                    "Michigan": true,
-                    "jwm's house": true,
-                    "Virginia": true,
-                    "Gualala": true,
-                    "Cleveland": true,
-                    "Puerto Rico": true,
-                    "Airplane": true,
-                    "Hampton Beach": true
-            }
-        }
-    ]
-
-    countByWithOther(data, "viewLocation", theatreChart, mergeRules);
+    countByWithOther(data, "viewLocation", theatreChart, mergeRulesConfig.theatre);
 };
 
 var prepareFormatData = function(data) {
-    var mergeRules = [
-        {
-            target: "Streaming",
-            names: {
-                "Apple TV": true,
-                "Netflix": true,
-                "Download": true,
-                "Youtube": true,
-                "Nebula": true,
-                "Xbox Streaming": true,
-                "Screening": true,
-                "HD Download": true,
-                "Amazon Instant": true,
-                "Netflix Streaming": true,
-                "iTunes Streaming": true,
-                "iPad": true,
-                "Amazon Unbox": true,
-                "Amazon Prime": true,
-                "Hulu": true,
-                "Xbox": true,
-                "Streaming": true,
-                "Disney+": true,
-                "iTunes (iPad)": true,
-                "Qello": true,
-                "Google Play": true
-            }
-        },
-        {
-            target: "Physical",
-            names: {
-                "Bluray": true,
-                "Blu-ray": true,
-                "VCD": true,
-                "CD": true,
-                "DVD": true,
-                "VHS": true,
-            }
-        },
-        {
-            target: "TV/Cable",
-            names: {
-                "TV": true,
-                "On Demand": true
-            }
-        },
-        {
-            target: "Theater",
-            names: {
-                "Theater": true,
-                "Theatre": true,
-                "IMAX": true,
-                "IFFBoston": true
-            }
-        }
-    ]
-
-    countByWithOther(data, "viewFormat", formatChart, mergeRules);
+    countByWithOther(data, "viewFormat", formatChart, mergeRulesConfig.format);
 };
 
 var prepareGenreData = function(data) {
