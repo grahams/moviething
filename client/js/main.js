@@ -783,6 +783,7 @@ var prepareFormatData = function(data) {
                 "Netflix": true,
                 "Download": true,
                 "Youtube": true,
+                "Nebula": true,
                 "Xbox Streaming": true,
                 "Screening": true,
                 "HD Download": true,
