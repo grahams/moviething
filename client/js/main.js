@@ -662,7 +662,8 @@ var mergeData = function(data, totals, key, mergeRules) {
         var found = false;
 
         for(var rule in mergeRules) {
-            if(mergeRules[rule].names[row[key].toLowerCase()] === true) {
+
+            if(row[key] && mergeRules[rule].names[row[key].toLowerCase()] === true) {
                 if(totals[mergeRules[rule].target] === undefined) {
                     totals[mergeRules[rule].target] = 1;
                 }
