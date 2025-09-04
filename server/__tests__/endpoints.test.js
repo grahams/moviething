@@ -17,7 +17,7 @@ describe('Movie API Endpoints', () => {
     jest.clearAllMocks();
   });
 
-  describe('GET /', () => {
+  describe('GET /api/', () => {
     it('should return movies for the current year', async () => {
       const mockMovies = [
         {
@@ -36,7 +36,7 @@ describe('Movie API Endpoints', () => {
       mockConnection.query.mockResolvedValueOnce(mockMovies);
 
       const response = await request(app)
-        .get('/')
+        .get('/api/')
         .expect(200);  // Using supertest's expect
 
       expect(response.body).toHaveLength(1);
@@ -48,15 +48,15 @@ describe('Movie API Endpoints', () => {
       mockConnection.query.mockRejectedValueOnce(new Error('Database error'));
       
       await request(app)
-        .get('/')
+        .get('/api/')
         .expect(500);
     });
   });
 
-  describe('POST /searchMovie', () => {
+  describe('POST /api/searchMovie', () => {
     it('should require API key', async () => {
       await request(app)
-        .post('/searchMovie')
+        .post('/api/searchMovie')
         .send({ json: JSON.stringify({ title: 'Test' }) })
         .expect(401);
     });
@@ -70,7 +70,7 @@ describe('Movie API Endpoints', () => {
       );
 
       await request(app)
-        .post('/searchMovie')
+        .post('/api/searchMovie')
         .send({ 
           json: JSON.stringify({ title: 'Test' }),
           apiKey: process.env.MOVIETHING_VALID_API_KEY
@@ -79,7 +79,7 @@ describe('Movie API Endpoints', () => {
     });
   });
 
-  describe('GET /exportLetterboxd', () => {
+  describe('GET /api/exportLetterboxd', () => {
     it('should export CSV data', async () => {
       const mockMovies = [
         {
@@ -97,7 +97,7 @@ describe('Movie API Endpoints', () => {
       mockConnection.query.mockResolvedValueOnce(mockMovies);
 
       const response = await request(app)
-        .get('/exportLetterboxd')
+        .get('/api/exportLetterboxd')
         .expect(200)
         .expect('Content-Type', /text\/csv/)
         .expect('Content-Disposition', 'attachment; filename=letterboxd.csv');
@@ -106,10 +106,10 @@ describe('Movie API Endpoints', () => {
     });
   });
 
-  describe('GET /health', () => {
+  describe('GET /api/health', () => {
     it('should return healthy status in test environment', async () => {
       const response = await request(app)
-        .get('/health')
+        .get('/api/health')
         .expect(200);
 
       expect(response.body).toMatchObject({

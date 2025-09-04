@@ -21,9 +21,8 @@ RUN npm install
 
 ENV NODE_ENV=production
 
-# Combined stage that runs both client and server
 EXPOSE 3000
-EXPOSE 3001
+ENV SERVER_PORT=3000
 HEALTHCHECK --interval=60m --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD sh -c 'curl -f http://localhost:${SERVER_PORT}/api/health || exit 1'
 CMD ["sh", "-c", "npm start"] 

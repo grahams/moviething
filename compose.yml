@@ -1,7 +1,9 @@
 services:
   app:
     container_name: moviething
-    image: ghcr.io/grahams/moviething:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
     environment:
@@ -12,9 +14,9 @@ services:
       - MOVIETHING_SQL_DB=${MOVIETHING_SQL_DB:-movies}
       - MOVIETHING_OMDB_API_KEY=${MOVIETHING_OMDB_API_KEY}
       - MOVIETHING_VALID_API_KEY=${MOVIETHING_VALID_API_KEY}
-      - SERVER_PORT=3001
+      - SERVER_PORT=3000
     ports:
-      - 3000:3001  # Server
+      - 3000:3000  # Server
     logging:
       driver: "json-file"
       options:
@@ -41,7 +43,7 @@ services:
     volumes:
       - ./mariadb/db:/var/lib/mysql
       - ./mariadb/backup:/backup
-      - ./mariadb/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./mariadb/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
       - ./mariadb/my-resolve.cnf:/etc/mysql/conf.d/my-resolve.cnf:ro
       - ./mariadb/backup.options:/backup.options:ro
     healthcheck:
@@ -74,6 +76,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  mariadb_data:

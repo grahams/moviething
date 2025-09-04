@@ -31,14 +31,15 @@ if (process.env.NODE_ENV !== 'test') {
   }
 }
 
-// Database connection pool - only create if not in test environment
-const pool = process.env.NODE_ENV !== 'test' ? mariadb.createPool({
+// Database connection pool
+// In tests, mariadb.createPool is mocked to return a mock pool
+const pool = mariadb.createPool({
   host: process.env.MOVIETHING_SQL_HOST,
   user: process.env.MOVIETHING_SQL_USER,
   password: process.env.MOVIETHING_SQL_PASS,
   database: process.env.MOVIETHING_SQL_DB,
   connectionLimit: 5
-}) : null;  // In test environment, this will be mocked
+});
 
 // Test database connection
 async function testConnection() {
@@ -92,10 +93,6 @@ const requireApiKey = (req, res, next) => {
 
 // Helper functions
 async function getRowsBetweenDates(startDate, endDate) {
-  if (process.env.NODE_ENV === 'test') {
-    return []; // Return empty array in test environment
-  }
-  
   if (!pool) {
     throw new Error('Database connection not available');
   }
@@ -118,10 +115,6 @@ async function getRowsBetweenDates(startDate, endDate) {
 }
 
 async function checkExistingInfo(imdbID) {
-  if (process.env.NODE_ENV === 'test') {
-    return []; // Return empty array in test environment
-  }
-  
   if (!pool) {
     throw new Error('Database connection not available');
   }
