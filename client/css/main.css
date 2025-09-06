@@ -193,6 +193,21 @@ body.dark-mode .datepicker table tr td.today:hover {
     background-color: #3a3f44 !important;
     color: #fff !important;
 }
+body.dark-mode .movie-table {
+    background: #23272a;
+    color: #e0e0e0;
+}
+body.dark-mode .movie-table th {
+    background-color: #23272a;
+    color: #e0e0e0;
+}
+body.dark-mode .movie-table td {
+    background: #181a1b;
+    color: #e0e0e0;
+}
+body.dark-mode .movie-table tr:hover {
+    background-color: #2c2f31;
+}
 
 /* ==========================================================================
    Helper classes
