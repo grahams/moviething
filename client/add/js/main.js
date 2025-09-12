@@ -131,10 +131,16 @@ $(document).ready(function() {
     $("#lookupId").on("change", function(e) {
 		var id = $("#lookupId").val();
 
-        id = id.replace(/(?:.|\n)*?(tt\d{8}|tt\d{7})(?:.|\n)*?.*/gm, "$1");
+        extractedId = id.match(/([0-9]+)/gm);
+        if(extractedId) {
+            id = extractedId[0];
+        }
+        else {
+            alert("Invalid TheMovieDB ID");
+            return;
+        }
 
         getMovieDetails(id);
-
     })
 
     for(var x = 0; x < viewConfig.length; x += 1) {
