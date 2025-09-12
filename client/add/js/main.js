@@ -377,8 +377,67 @@ var updateFilterIndicator = function(filters) {
     }
 };
 
+// Advanced Filters localStorage functions
+var saveAdvancedFilters = function() {
+    var filters = {
+        excludeVideos: $('#excludeVideos').is(':checked'),
+        minPopularity: $('#minPopularity').val(),
+        maxPopularity: $('#maxPopularity').val(),
+        minVoteCount: $('#minVoteCount').val(),
+        maxVoteCount: $('#maxVoteCount').val(),
+        minVoteAverage: $('#minVoteAverage').val(),
+        maxVoteAverage: $('#maxVoteAverage').val(),
+        minReleaseDate: $('#minReleaseDate').val(),
+        maxReleaseDate: $('#maxReleaseDate').val()
+    };
+    localStorage.setItem('advancedFilters', JSON.stringify(filters));
+};
+
+var loadAdvancedFilters = function() {
+    var savedFilters = localStorage.getItem('advancedFilters');
+    if (savedFilters) {
+        try {
+            var filters = JSON.parse(savedFilters);
+            $('#excludeVideos').prop('checked', filters.excludeVideos || false);
+            $('#minPopularity').val(filters.minPopularity || '');
+            $('#maxPopularity').val(filters.maxPopularity || '');
+            $('#minVoteCount').val(filters.minVoteCount || '');
+            $('#maxVoteCount').val(filters.maxVoteCount || '');
+            $('#minVoteAverage').val(filters.minVoteAverage || '');
+            $('#maxVoteAverage').val(filters.maxVoteAverage || '');
+            $('#minReleaseDate').val(filters.minReleaseDate || '');
+            $('#maxReleaseDate').val(filters.maxReleaseDate || '');
+            
+            // Update filter indicator after loading saved filters
+            var searchTerm = $("#searchName").val().trim();
+            if (searchTerm) {
+                searchMovie(searchTerm);
+            } else {
+                // Just update the filter indicator without triggering search
+                var filterData = {
+                    exclude_videos: filters.excludeVideos || false,
+                    min_popularity: filters.minPopularity ? parseFloat(filters.minPopularity) : undefined,
+                    max_popularity: filters.maxPopularity ? parseFloat(filters.maxPopularity) : undefined,
+                    min_vote_count: filters.minVoteCount ? parseInt(filters.minVoteCount) : undefined,
+                    max_vote_count: filters.maxVoteCount ? parseInt(filters.maxVoteCount) : undefined,
+                    min_vote_average: filters.minVoteAverage ? parseFloat(filters.minVoteAverage) : undefined,
+                    max_vote_average: filters.maxVoteAverage ? parseFloat(filters.maxVoteAverage) : undefined,
+                    min_release_date: filters.minReleaseDate || undefined,
+                    max_release_date: filters.maxReleaseDate || undefined
+                };
+                updateFilterIndicator(filterData);
+            }
+        } catch (e) {
+            console.log('Error loading saved filters:', e);
+        }
+    }
+};
+
 // Advanced Filters functionality
 $(document).ready(function() {
+    // Load saved filters on page load
+    loadAdvancedFilters();
+    
     // Handle collapsible toggle button text
     $('#advancedFilters').on('show.bs.collapse', function () {
         var button = $('button[data-target="#advancedFilters"]');
@@ -414,6 +473,9 @@ $(document).ready(function() {
         $('#minReleaseDate').val('');
         $('#maxReleaseDate').val('');
         
+        // Clear saved filters from localStorage
+        localStorage.removeItem('advancedFilters');
+        
         // Trigger search after clearing if there's a search term
         var searchTerm = $("#searchName").val().trim();
         if (searchTerm) {
@@ -436,6 +498,9 @@ $(document).ready(function() {
     
     filterFields.forEach(function(selector) {
         $(selector).on('change input', function() {
+            // Save filters to localStorage whenever they change
+            saveAdvancedFilters();
+            
             var searchTerm = $("#searchName").val().trim();
             if (searchTerm) {
                 // Small delay to avoid too many requests while typing
