@@ -17,7 +17,7 @@ if (process.env.NODE_ENV !== 'test') {
     'MOVIETHING_SQL_USER',
     'MOVIETHING_SQL_PASS',
     'MOVIETHING_SQL_DB',
-    'MOVIETHING_OMDB_API_KEY',
+    'MOVIETHING_TMDB_API_KEY',
     'MOVIETHING_VALID_API_KEY',
     'MOVIETHING_RSS_TITLE',
     'MOVIETHING_RSS_DESCRIPTION'
@@ -264,36 +264,115 @@ apiRouter.get('/', async (req, res) => {
 
 apiRouter.post('/searchMovie', requireApiKey, async (req, res) => {
   try {
-    const { title } = JSON.parse(req.body.json);
+    const { 
+      title, 
+      exclude_videos, 
+      min_popularity, 
+      max_popularity, 
+      min_vote_count, 
+      max_vote_count, 
+      min_vote_average, 
+      max_vote_average, 
+      min_release_date, 
+      max_release_date 
+    } = JSON.parse(req.body.json);
     
     let allResults = [];
     let page = 1;
     let totalResults = 0;
-    let hasMorePages = true;
+    let totalPages = 1;
     
     // Fetch all pages of results
-    while (hasMorePages && page <= 10) { // Limit to 10 pages to prevent excessive API calls
-      const url = `https://private.omdbapi.com/?apiKey=${process.env.MOVIETHING_OMDB_API_KEY}&s=${encodeURIComponent(title)}&type=movie&page=${page}`;
+    while (page <= 10 && page <= totalPages) { // Limit to 10 pages to prevent excessive API calls
+      const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIETHING_TMDB_API_KEY}&query=${encodeURIComponent(title)}&page=${page}`;
       const response = await fetch(url);
       const pageData = await response.json();
       
-      if (pageData.Response === 'False') {
-        // No more results or error
-        hasMorePages = false;
+      if (pageData.total_results === 0 || !pageData.results || pageData.results.length === 0) {
+        // No more results
         break;
       }
       
       if (page === 1) {
-        totalResults = parseInt(pageData.totalResults) || 0;
+        totalResults = pageData.total_results || 0;
+        totalPages = pageData.total_pages || 1;
       }
       
-      if (pageData.Search && pageData.Search.length > 0) {
-        allResults = allResults.concat(pageData.Search);
-      }
-      
-      // Check if we've fetched all available results
-      if (allResults.length >= totalResults || pageData.Search.length < 10) {
-        hasMorePages = false;
+      if (pageData.results && pageData.results.length > 0) {
+        // Apply all filters
+        let filteredResults = pageData.results;
+        
+        // Filter out videos if exclude_videos is true
+        if (exclude_videos === true) {
+          filteredResults = filteredResults.filter(movie => !movie.video);
+        }
+        
+        // Filter by popularity
+        if (min_popularity !== undefined && min_popularity !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.popularity !== undefined && movie.popularity >= min_popularity
+          );
+        }
+        if (max_popularity !== undefined && max_popularity !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.popularity !== undefined && movie.popularity <= max_popularity
+          );
+        }
+        
+        // Filter by vote count
+        if (min_vote_count !== undefined && min_vote_count !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.vote_count !== undefined && movie.vote_count >= min_vote_count
+          );
+        }
+        if (max_vote_count !== undefined && max_vote_count !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.vote_count !== undefined && movie.vote_count <= max_vote_count
+          );
+        }
+        
+        // Filter by vote average
+        if (min_vote_average !== undefined && min_vote_average !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.vote_average !== undefined && movie.vote_average >= min_vote_average
+          );
+        }
+        if (max_vote_average !== undefined && max_vote_average !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.vote_average !== undefined && movie.vote_average <= max_vote_average
+          );
+        }
+        
+        // Filter by release date
+        if (min_release_date !== undefined && min_release_date !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.release_date && movie.release_date >= min_release_date
+          );
+        }
+        if (max_release_date !== undefined && max_release_date !== null) {
+          filteredResults = filteredResults.filter(movie => 
+            movie.release_date && movie.release_date <= max_release_date
+          );
+        }
+        
+        // Only process if we have results after filtering
+        if (filteredResults.length > 0) {
+          // Transform TMDB results to match OMDB format for backward compatibility
+          const transformedResults = filteredResults.map(movie => ({
+            Title: movie.title,
+            Year: movie.release_date ? movie.release_date.split('-')[0] : 'N/A',
+            Type: 'movie',
+            Poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'N/A',
+            tmdbID: movie.id,
+            overview: movie.overview,
+            release_date: movie.release_date,
+            vote_average: movie.vote_average,
+            vote_count: movie.vote_count,
+            popularity: movie.popularity,
+            video: movie.video
+          }));
+          allResults = allResults.concat(transformedResults);
+        }
       }
       
       page++;
@@ -302,11 +381,11 @@ apiRouter.post('/searchMovie', requireApiKey, async (req, res) => {
     // Return combined results in the same format as the original API
     const combinedData = {
       Search: allResults,
-      totalResults: totalResults.toString(),
+      totalResults: allResults.length.toString(), // Use actual filtered results count
       Response: 'True'
     };
     
-    res.jsonc(combinedData);
+    res.json(combinedData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -315,18 +394,78 @@ apiRouter.post('/searchMovie', requireApiKey, async (req, res) => {
 
 apiRouter.post('/getMovieDetails', requireApiKey, async (req, res) => {
   try {
-    const { imdbID } = JSON.parse(req.body.json);
-    const url = `https://www.omdbapi.com/?apiKey=${process.env.MOVIETHING_OMDB_API_KEY}&i=${imdbID}`;
+    const { tmdbID } = JSON.parse(req.body.json);
+    
+    // Since we're now using TMDB IDs instead of IMDb IDs, we need to handle both cases
+    // If the ID is numeric, it's likely a TMDB ID; if it starts with 'tt', it's an IMDb ID
+    let movieId = tmdbID;
+    
+    if (!isNaN(tmdbID)) {
+      // It's an IMDb ID, we need to find the TMDB movie by IMDb ID
+      const findUrl = `https://api.themoviedb.org/3/movie/${tmdbID}?api_key=${process.env.MOVIETHING_TMDB_API_KEY}&language=en-US`;
+      const findResponse = await fetch(findUrl);
+      const findData = await findResponse.json();
+      
+      if (findData.id == tmdbID) {
+        movieId = tmdbID;
+      } else {
+        return res.status(404).json({ error: 'Movie not found' });
+      }
+    }
+    else {
+      return res.status(404).json({ error: 'Invalid TMDB ID' });
+    }
+    
+    // Get movie details from TMDB
+    const url = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.MOVIETHING_TMDB_API_KEY}&append_to_response=external_ids`;
     const response = await fetch(url);
     const data = await response.json();
     
-    const existing = await checkExistingInfo(imdbID);
-    data.firstViewing = existing.length === 0;
-    if (!data.firstViewing) {
-      data.previousViewings = existing;
+    if (data.status_code) {
+      return res.status(404).json({ error: 'Movie not found' });
     }
     
-    res.json(data);
+    // Transform TMDB data to match OMDB format for backward compatibility
+    const transformedData = {
+      Title: data.title,
+      Year: data.release_date ? data.release_date.split('-')[0] : 'N/A',
+      Rated: 'N/A', // TMDB doesn't have MPAA ratings in the same format
+      Released: data.release_date || 'N/A',
+      Runtime: data.runtime ? `${data.runtime} min` : 'N/A',
+      Genre: data.genres ? data.genres.map(g => g.name).join(', ') : 'N/A',
+      Director: 'N/A', // Will be filled by credits endpoint if needed
+      Writer: 'N/A', // Will be filled by credits endpoint if needed
+      Actors: 'N/A', // Will be filled by credits endpoint if needed
+      Plot: data.overview || 'N/A',
+      Language: data.spoken_languages ? data.spoken_languages.map(l => l.name).join(', ') : 'N/A',
+      Country: data.production_countries ? data.production_countries.map(c => c.name).join(', ') : 'N/A',
+      Awards: 'N/A', // TMDB doesn't have awards in the same format
+      Poster: data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : 'N/A',
+      Ratings: [], // TMDB doesn't have the same rating system
+      Metascore: 'N/A', // TMDB doesn't have Metascore
+      imdbRating: data.vote_average ? data.vote_average.toString() : 'N/A',
+      imdbVotes: data.vote_count ? data.vote_count.toString() : 'N/A',
+      imdbID: data.imdb_id,
+      Type: 'movie',
+      Response: 'True',
+      // Additional TMDB-specific data
+      tmdbID: data.id,
+      backdrop_path: data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : 'N/A',
+      budget: data.budget,
+      revenue: data.revenue,
+      status: data.status,
+      tagline: data.tagline,
+      popularity: data.popularity
+    };
+    
+    // Check existing viewings using the original ID (could be IMDb or TMDB)
+    const existing = await checkExistingInfo(data.imdb_id);
+    transformedData.firstViewing = existing.length === 0;
+    if (!transformedData.firstViewing) {
+      transformedData.previousViewings = existing;
+    }
+    
+    res.json(transformedData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

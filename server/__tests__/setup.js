@@ -6,15 +6,11 @@ process.env.MOVIETHING_SQL_HOST = 'localhost';
 process.env.MOVIETHING_SQL_USER = 'test';
 process.env.MOVIETHING_SQL_PASS = 'test';
 process.env.MOVIETHING_SQL_DB = 'test';
-process.env.MOVIETHING_OMDB_API_KEY = 'test_key';
+process.env.MOVIETHING_TMDB_API_KEY = 'test_key';
 process.env.MOVIETHING_VALID_API_KEY = 'test_api_key';
 
-// Mock node-fetch
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    json: () => Promise.resolve({ Search: [] })
-  })
-);
+// Mock node-fetch module
+jest.mock('node-fetch', () => jest.fn());
 
 // Mock MariaDB with a more complete implementation
 const mockPool = {

@@ -1,133 +1,218 @@
 <!doctype html>
 <html class="no-js" lang="">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <title>Add Movie - MovieThing</title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <link rel="manifest" href="site.webmanifest">
-        <!-- Place favicon.ico in the root directory -->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Add Movie - MovieThing</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <link rel="stylesheet" href="../css/normalize.css">
-        <link rel="stylesheet" href="../css/main.css">
-    </head>
-    <body>
-        <!--[if lte IE 9]>
+    <link rel="manifest" href="site.webmanifest">
+    <!-- Place favicon.ico in the root directory -->
+
+    <link rel="stylesheet" href="../css/normalize.css">
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+
+<body>
+    <!--[if lte IE 9]>
             <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
         <![endif]-->
 
-        <div class="container p-2">
-            <div class="mb-3">
-                <a href="/" class="btn btn-outline-primary">← Back to Charts</a>
-            </div>
-            <form>
-                <div>
-                    <input id="apiKey" type="password" class="form-control" placeholder="API Key">
-                </div>
-            </form>
-            <form>
-                <div class="row">
-                    <div class="col-12 position-relative">
-                        <input id="searchName" type="text" class="form-control" placeholder="Search name" data-1p-ignore>
-                        <div id="searchResults" class="dropdown-menu w-100" style="position: absolute; top: 100%; left: 0; z-index: 1000; display: none;"></div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <input id="lookupId" type="text" class="form-control" placeholder="Lookup IMDB ID">
-                    </div>
-                </div>
-            </form>
-
-            <form id="movieForm">
-                <div class="row">
-                    <div class="col-12">
-                        <input id="movieTitle" type="text" class="form-control" placeholder="Movie name">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <input id="viewingDate" data-provide="datepicker" type="text" class="form-control" placeholder="Viewing date">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <input id="movieURL" type="text" class="form-control" placeholder="Movie URL">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <select name="viewFormat" id="viewFormat" class="custom-select">
-                            <option value="viewFormat">View Format</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <select name="viewLocation" id="viewLocation" class="custom-select">
-                            <option value="viewLocation">View Location</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <input id="movieGenre" type="text" class="form-control" placeholder="Movie genre">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <textarea id="movieReview" class="form-control" placeholder="Movie review"></textarea>
-                    </div>
-                </div>
-
-                <div class="row custom-control custom-checkbox">
-                    <div class="col-12">
-                        <input type="checkbox" class="custom-control-input" id="firstViewing" checked>
-                        <label class="custom-control-label" for="firstViewing">First viewing?</label>
-                    </div>
-                </div>
-
-                <div class="row custom-control custom-button">
-                    <div class="col-12">
-                        <button id="formSubmit" type="button" class="btn btn-primary" disabled="disabled">Submit</button>
-                    </div>
-                </div>
-            </form>
-
-            <div class="mt-4">
-                <h4 id="viewingsHeader" class="mb-3" style="display: none;">Previous viewings of <span id="viewingsMovieTitle"></span></h4>
-                <table class="table table-sm" id="viewingsTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Format</th>
-                            <th>Location</th>
-                            <th>Review</th>
-                        </tr>
-                    </thead>
-                    <tbody id="viewingsList">
-                    </tbody>
-                </table>
-            </div>
+    <div class="container-fluid p-2" style="max-width: 1200px; margin: 0 auto;">
+        <div class="mb-3">
+            <a href="/" class="btn btn-outline-primary">← Back to Charts</a>
         </div>
+        <form>
+            <div>
+                <input id="apiKey" type="password" class="form-control" placeholder="API Key">
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="position-relative">
+                        <div class="input-group">
+                            <input id="searchName" type="text" class="form-control" placeholder="Search name"
+                                data-1p-ignore>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" data-toggle="collapse"
+                                    data-target="#advancedFilters" aria-expanded="false"
+                                    aria-controls="advancedFilters">
+                                    Filters ▼
+                                </button>
+                            </div>
+                        </div>
+                        <div class="collapse mb-3" id="advancedFilters">
+                            <div class="card card-body">
+                                <div class="custom-control custom-checkbox mb-3">
+                                    <input type="checkbox" class="custom-control-input" id="excludeVideos">
+                                    <label class="custom-control-label" for="excludeVideos">Exclude videos</label>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="minPopularity" class="form-label">Min Popularity</label>
+                                        <input type="number" class="form-control form-control-sm" id="minPopularity"
+                                            placeholder="e.g. 50">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="maxPopularity" class="form-label">Max Popularity</label>
+                                        <input type="number" class="form-control form-control-sm" id="maxPopularity"
+                                            placeholder="e.g. 200">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="minVoteCount" class="form-label">Min Vote Count</label>
+                                        <input type="number" class="form-control form-control-sm" id="minVoteCount"
+                                            placeholder="e.g. 100">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="maxVoteCount" class="form-label">Max Vote Count</label>
+                                        <input type="number" class="form-control form-control-sm" id="maxVoteCount"
+                                            placeholder="e.g. 5000">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="minVoteAverage" class="form-label">Min Vote Average</label>
+                                        <input type="number" step="0.1" class="form-control form-control-sm"
+                                            id="minVoteAverage" placeholder="e.g. 6.0">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="maxVoteAverage" class="form-label">Max Vote Average</label>
+                                        <input type="number" step="0.1" class="form-control form-control-sm"
+                                            id="maxVoteAverage" placeholder="e.g. 9.0">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="minReleaseDate" class="form-label">Min Release Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="minReleaseDate">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="maxReleaseDate" class="form-label">Max Release Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="maxReleaseDate">
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearFilters">
+                                        Clear All Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="searchResults" class="dropdown-menu w-100"
+                            style="position: absolute; top: 100%; left: 0; z-index: 1000; display: none;"></div>
+                    </div>
+                    <!-- Advanced Search Filters -->
 
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/1.0.0/json2html.min.js"></script>
-        
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <input id="lookupId" type="text" class="form-control" placeholder="Lookup IMDB ID">
+                </div>
+            </div>
+        </form>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <form id="movieForm">
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <input id="movieTitle" type="text" class="form-control" placeholder="Movie name">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <input id="viewingDate" data-provide="datepicker" type="text" class="form-control"
+                        placeholder="Viewing date">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <input id="movieURL" type="text" class="form-control" placeholder="Movie URL">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <select name="viewFormat" id="viewFormat" class="custom-select">
+                        <option value="viewFormat">View Format</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <select name="viewLocation" id="viewLocation" class="custom-select">
+                        <option value="viewLocation">View Location</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <input id="movieGenre" type="text" class="form-control" placeholder="Movie genre">
+                </div>
+            </div>
 
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <textarea id="movieReview" class="form-control" placeholder="Movie review"></textarea>
+                </div>
+            </div>
 
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/js/bootstrap-datepicker.min.js" integrity="sha256-TueWqYu0G+lYIimeIcMI8x1m14QH/DQVt4s9m/uuhPw=" crossorigin="anonymous"></script>
+            <div class="row custom-control custom-checkbox">
+                <div class="col-12 position-relative">
+                    <input type="checkbox" class="custom-control-input" id="firstViewing" checked>
+                    <label class="custom-control-label" for="firstViewing">First viewing?</label>
+                </div>
+            </div>
 
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/css/bootstrap-datepicker3.min.css" integrity="sha256-WgFzD1SACMRatATw58Fxd2xjHxwTdOqB48W5h+ZGLHA=" crossorigin="anonymous" />
-            
-        <script src="../js/plugins.js"></script>
-        <script src="js/main.js"></script>
-    </body>
+            <div class="row custom-control custom-button">
+                <div class="col-12 position-relative">
+                    <button id="formSubmit" type="button" class="btn btn-primary" disabled="disabled">Submit</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="mt-4">
+            <h4 id="viewingsHeader" class="mb-3" style="display: none;">Previous viewings of <span
+                    id="viewingsMovieTitle"></span></h4>
+            <table class="table table-sm" id="viewingsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Format</th>
+                        <th>Location</th>
+                        <th>Review</th>
+                    </tr>
+                </thead>
+                <tbody id="viewingsList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/1.0.0/json2html.min.js"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/js/bootstrap-datepicker.min.js"
+        integrity="sha256-TueWqYu0G+lYIimeIcMI8x1m14QH/DQVt4s9m/uuhPw=" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/css/bootstrap-datepicker3.min.css"
+        integrity="sha256-WgFzD1SACMRatATw58Fxd2xjHxwTdOqB48W5h+ZGLHA=" crossorigin="anonymous" />
+
+    <script src="../js/plugins.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
 </html>

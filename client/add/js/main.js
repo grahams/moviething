@@ -200,37 +200,53 @@ var updateViewLocations = function(viewItem) {
 
 
 var searchMovie = function(title) {
-    var j = {"title": title};
+    var j = {
+        "title": title,
+        "exclude_videos": $("#excludeVideos").is(":checked"),
+        "min_popularity": $("#minPopularity").val() ? parseFloat($("#minPopularity").val()) : undefined,
+        "max_popularity": $("#maxPopularity").val() ? parseFloat($("#maxPopularity").val()) : undefined,
+        "min_vote_count": $("#minVoteCount").val() ? parseInt($("#minVoteCount").val()) : undefined,
+        "max_vote_count": $("#maxVoteCount").val() ? parseInt($("#maxVoteCount").val()) : undefined,
+        "min_vote_average": $("#minVoteAverage").val() ? parseFloat($("#minVoteAverage").val()) : undefined,
+        "max_vote_average": $("#maxVoteAverage").val() ? parseFloat($("#maxVoteAverage").val()) : undefined,
+        "min_release_date": $("#minReleaseDate").val() || undefined,
+        "max_release_date": $("#maxReleaseDate").val() || undefined
+    };
 
-    var data = {apiKey: $("#apiKey").val(),
-                json: JSON.stringify(j)};
+    // Update filter indicator
+    updateFilterIndicator(j);
+
+    var data = {
+        apiKey: $("#apiKey").val(),
+        json: JSON.stringify(j)
+    };
 
     jQuery.post({
         url: `${API_BASE_URL}/searchMovie`,
         data: data
     })
     .done(function(data) {
-        // Sort search results by year in descending order
-        if (data.Search && data.Search.length > 0) {
-            data.Search.sort(function(a, b) {
-                return parseInt(b.Year) - parseInt(a.Year);
-            });
-        }
+        // // Sort search results by year in descending order
+        // if (data.Search && data.Search.length > 0) {
+        //     data.Search.sort(function(a, b) {
+        //         return parseInt(b.Year) - parseInt(a.Year);
+        //     });
+        // }
 
         var $results = $("#searchResults");
         $results.empty();
         
         if (data.Search && data.Search.length > 0) {
             data.Search.forEach(function(movie) {
-                var $item = $('<a class="dropdown-item" href="#" data-imdbid="' + movie.imdbID + '">' + 
+                var $item = $('<a class="dropdown-item" href="#" data-tmdbid="' + movie.tmdbID + '">' + 
                   movie.Title + ' (' + movie.Year + ')</a>');
                 
                 $item.on('mousedown', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    var imdbId = $(this).data('imdbid');
+                    var tmdbId = $(this).data('tmdbid');
                     $results.hide();
-                    getMovieDetails(imdbId);
+                    getMovieDetails(tmdbId);
                     return false;
                 });
                 
@@ -246,8 +262,8 @@ var searchMovie = function(title) {
     })
 };
 
-var getMovieDetails = function(imdbId) {
-    var j = {"imdbID": imdbId};
+var getMovieDetails = function(tmdbId) {
+    var j = {"tmdbID": tmdbId};
 
     var data = {apiKey: $("#apiKey").val(),
                 json: JSON.stringify(j)};
@@ -335,3 +351,99 @@ var assembleData = function() {
 
 	return JSON.stringify(data);
 };
+
+// Function to update filter indicator
+var updateFilterIndicator = function(filters) {
+    var activeFilters = [];
+    
+    if (filters.exclude_videos) activeFilters.push('No Videos');
+    if (filters.min_popularity !== undefined) activeFilters.push(`Pop≥${filters.min_popularity}`);
+    if (filters.max_popularity !== undefined) activeFilters.push(`Pop≤${filters.max_popularity}`);
+    if (filters.min_vote_count !== undefined) activeFilters.push(`Votes≥${filters.min_vote_count}`);
+    if (filters.max_vote_count !== undefined) activeFilters.push(`Votes≤${filters.max_vote_count}`);
+    if (filters.min_vote_average !== undefined) activeFilters.push(`Rating≥${filters.min_vote_average}`);
+    if (filters.max_vote_average !== undefined) activeFilters.push(`Rating≤${filters.max_vote_average}`);
+    if (filters.min_release_date) activeFilters.push(`From ${filters.min_release_date}`);
+    if (filters.max_release_date) activeFilters.push(`To ${filters.max_release_date}`);
+    
+    var button = $('button[data-target="#advancedFilters"]');
+    var isExpanded = button.html().includes('▲');
+    var baseText = isExpanded ? 'Filters ▲' : 'Filters ▼';
+    
+    if (activeFilters.length > 0) {
+        button.html(baseText + ' <span class="badge badge-primary ml-1">' + activeFilters.length + '</span>');
+    } else {
+        button.html(baseText);
+    }
+};
+
+// Advanced Filters functionality
+$(document).ready(function() {
+    // Handle collapsible toggle button text
+    $('#advancedFilters').on('show.bs.collapse', function () {
+        var button = $('button[data-target="#advancedFilters"]');
+        var badge = button.find('.badge');
+        var baseText = 'Filters ▲';
+        if (badge.length > 0) {
+            button.html(baseText + ' <span class="badge badge-primary ml-1">' + badge.text() + '</span>');
+        } else {
+            button.html(baseText);
+        }
+    });
+    
+    $('#advancedFilters').on('hide.bs.collapse', function () {
+        var button = $('button[data-target="#advancedFilters"]');
+        var badge = button.find('.badge');
+        var baseText = 'Filters ▼';
+        if (badge.length > 0) {
+            button.html(baseText + ' <span class="badge badge-primary ml-1">' + badge.text() + '</span>');
+        } else {
+            button.html(baseText);
+        }
+    });
+    
+    // Clear all filters functionality
+    $('#clearFilters').on('click', function() {
+        $('#excludeVideos').prop('checked', false);
+        $('#minPopularity').val('');
+        $('#maxPopularity').val('');
+        $('#minVoteCount').val('');
+        $('#maxVoteCount').val('');
+        $('#minVoteAverage').val('');
+        $('#maxVoteAverage').val('');
+        $('#minReleaseDate').val('');
+        $('#maxReleaseDate').val('');
+        
+        // Trigger search after clearing if there's a search term
+        var searchTerm = $("#searchName").val().trim();
+        if (searchTerm) {
+            searchMovie(searchTerm);
+        }
+    });
+    
+    // Auto-search when filter fields change
+    var filterFields = [
+        '#excludeVideos',
+        '#minPopularity', 
+        '#maxPopularity',
+        '#minVoteCount',
+        '#maxVoteCount', 
+        '#minVoteAverage',
+        '#maxVoteAverage',
+        '#minReleaseDate',
+        '#maxReleaseDate'
+    ];
+    
+    filterFields.forEach(function(selector) {
+        $(selector).on('change input', function() {
+            var searchTerm = $("#searchName").val().trim();
+            if (searchTerm) {
+                // Small delay to avoid too many requests while typing
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(function() {
+                    searchMovie(searchTerm);
+                }, 300);
+            }
+        });
+    });
+});

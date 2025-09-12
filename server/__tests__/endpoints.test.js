@@ -62,12 +62,24 @@ describe('Movie API Endpoints', () => {
     });
 
     it('should search for movies with valid API key', async () => {
-      const mockOmdbResponse = { Search: [{ Title: 'Test Movie', Year: '2024' }] };
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          json: () => Promise.resolve(mockOmdbResponse)
-        })
-      );
+      const mockTmdbResponse = { 
+        results: [{ 
+          id: 123, 
+          title: 'Test Movie', 
+          release_date: '2024-01-01',
+          poster_path: '/test.jpg',
+          overview: 'Test overview',
+          video: false
+        }],
+        total_results: 1,
+        total_pages: 1
+      };
+      
+      // Set up the fetch mock for this test
+      const fetch = require('node-fetch');
+      fetch.mockResolvedValue({
+        json: () => Promise.resolve(mockTmdbResponse)
+      });
 
       await request(app)
         .post('/api/searchMovie')
@@ -76,6 +88,239 @@ describe('Movie API Endpoints', () => {
           apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
+    });
+
+    it('should filter out videos when exclude_videos is true', async () => {
+      const mockTmdbResponse = { 
+        results: [
+          { 
+            id: 123, 
+            title: 'Test Movie', 
+            release_date: '2024-01-01',
+            poster_path: '/test.jpg',
+            overview: 'Test overview',
+            video: false
+          },
+          { 
+            id: 124, 
+            title: 'Test Video', 
+            release_date: '2024-01-01',
+            poster_path: '/test2.jpg',
+            overview: 'Test video overview',
+            video: true
+          }
+        ],
+        total_results: 2,
+        total_pages: 1
+      };
+      
+      // Set up the fetch mock for this test
+      const fetch = require('node-fetch');
+      fetch.mockResolvedValue({
+        json: () => Promise.resolve(mockTmdbResponse)
+      });
+
+      const response = await request(app)
+        .post('/api/searchMovie')
+        .send({ 
+          json: JSON.stringify({ title: 'Test', exclude_videos: true }),
+          apiKey: process.env.MOVIETHING_VALID_API_KEY
+        })
+        .expect(200);
+
+
+      // Should only return the movie, not the video
+      expect(response.body.Search).toHaveLength(1);
+      expect(response.body.Search[0].video).toBe(false);
+    });
+
+    it('should filter by popularity range', async () => {
+      const mockTmdbResponse = { 
+        results: [
+          { 
+            id: 123, 
+            title: 'Popular Movie', 
+            release_date: '2024-01-01',
+            poster_path: '/test.jpg',
+            overview: 'Test overview',
+            video: false,
+            popularity: 100
+          },
+          { 
+            id: 124, 
+            title: 'Less Popular Movie', 
+            release_date: '2024-01-01',
+            poster_path: '/test2.jpg',
+            overview: 'Test overview',
+            video: false,
+            popularity: 50
+          }
+        ],
+        total_results: 2,
+        total_pages: 1
+      };
+      
+      // Set up the fetch mock for this test
+      const fetch = require('node-fetch');
+      fetch.mockResolvedValue({
+        json: () => Promise.resolve(mockTmdbResponse)
+      });
+
+      const response = await request(app)
+        .post('/api/searchMovie')
+        .send({ 
+          json: JSON.stringify({ title: 'Test', min_popularity: 75 }),
+          apiKey: process.env.MOVIETHING_VALID_API_KEY
+        })
+        .expect(200);
+
+      // Should only return the popular movie
+      expect(response.body.Search).toHaveLength(1);
+      expect(response.body.Search[0].popularity).toBe(100);
+    });
+
+    it('should filter by vote average range', async () => {
+      const mockTmdbResponse = { 
+        results: [
+          { 
+            id: 123, 
+            title: 'High Rated Movie', 
+            release_date: '2024-01-01',
+            poster_path: '/test.jpg',
+            overview: 'Test overview',
+            video: false,
+            vote_average: 8.5,
+            vote_count: 1000
+          },
+          { 
+            id: 124, 
+            title: 'Low Rated Movie', 
+            release_date: '2024-01-01',
+            poster_path: '/test2.jpg',
+            overview: 'Test overview',
+            video: false,
+            vote_average: 5.2,
+            vote_count: 500
+          }
+        ],
+        total_results: 2,
+        total_pages: 1
+      };
+      
+      // Set up the fetch mock for this test
+      const fetch = require('node-fetch');
+      fetch.mockResolvedValue({
+        json: () => Promise.resolve(mockTmdbResponse)
+      });
+
+      const response = await request(app)
+        .post('/api/searchMovie')
+        .send({ 
+          json: JSON.stringify({ title: 'Test', min_vote_average: 7.0 }),
+          apiKey: process.env.MOVIETHING_VALID_API_KEY
+        })
+        .expect(200);
+
+      // Should only return the high rated movie
+      expect(response.body.Search).toHaveLength(1);
+      expect(response.body.Search[0].vote_average).toBe(8.5);
+    });
+
+    it('should filter by release date range', async () => {
+      const mockTmdbResponse = { 
+        results: [
+          { 
+            id: 123, 
+            title: 'Recent Movie', 
+            release_date: '2023-12-01',
+            poster_path: '/test.jpg',
+            overview: 'Test overview',
+            video: false
+          },
+          { 
+            id: 124, 
+            title: 'Old Movie', 
+            release_date: '2020-01-01',
+            poster_path: '/test2.jpg',
+            overview: 'Test overview',
+            video: false
+          }
+        ],
+        total_results: 2,
+        total_pages: 1
+      };
+      
+      // Set up the fetch mock for this test
+      const fetch = require('node-fetch');
+      fetch.mockResolvedValue({
+        json: () => Promise.resolve(mockTmdbResponse)
+      });
+
+      const response = await request(app)
+        .post('/api/searchMovie')
+        .send({ 
+          json: JSON.stringify({ title: 'Test', min_release_date: '2023-01-01' }),
+          apiKey: process.env.MOVIETHING_VALID_API_KEY
+        })
+        .expect(200);
+
+      // Should only return the recent movie
+      expect(response.body.Search).toHaveLength(1);
+      expect(response.body.Search[0].release_date).toBe('2023-12-01');
+    });
+
+    it('should apply multiple filters simultaneously', async () => {
+      const mockTmdbResponse = { 
+        results: [
+          { 
+            id: 123, 
+            title: 'Good Movie', 
+            release_date: '2023-12-01',
+            poster_path: '/test.jpg',
+            overview: 'Test overview',
+            video: false,
+            popularity: 100,
+            vote_average: 8.5,
+            vote_count: 1000
+          },
+          { 
+            id: 124, 
+            title: 'Bad Movie', 
+            release_date: '2023-06-01',
+            poster_path: '/test2.jpg',
+            overview: 'Test overview',
+            video: false,
+            popularity: 50,
+            vote_average: 5.2,
+            vote_count: 500
+          }
+        ],
+        total_results: 2,
+        total_pages: 1
+      };
+      
+      // Set up the fetch mock for this test
+      const fetch = require('node-fetch');
+      fetch.mockResolvedValue({
+        json: () => Promise.resolve(mockTmdbResponse)
+      });
+
+      const response = await request(app)
+        .post('/api/searchMovie')
+        .send({ 
+          json: JSON.stringify({ 
+            title: 'Test', 
+            min_popularity: 75,
+            min_vote_average: 7.0,
+            min_release_date: '2023-07-01'
+          }),
+          apiKey: process.env.MOVIETHING_VALID_API_KEY
+        })
+        .expect(200);
+
+      // Should only return the movie that meets all criteria
+      expect(response.body.Search).toHaveLength(1);
+      expect(response.body.Search[0].Title).toBe('Good Movie');
     });
   });
 

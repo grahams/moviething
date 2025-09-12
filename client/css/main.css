@@ -128,7 +128,7 @@ body.dark-mode {
     background-color: #181a1b !important;
     color: #e0e0e0 !important;
 }
-body.dark-mode .container {
+body.dark-mode .container-fluid {
     background: none;
     color: #e0e0e0;
 }
@@ -390,4 +390,223 @@ body.dark-mode .movie-table tr:hover {
     h3 {
         page-break-after: avoid;
     }
+}
+
+/* ==========================================================================
+   Custom styles for MovieThing
+   ========================================================================== */
+
+/* Advanced Filters styling with dark mode support */
+#advancedFilters .card {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background-color: var(--bs-light, #f8f9fa);
+}
+
+#advancedFilters .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bs-body-color, #495057);
+    margin-bottom: 0.25rem;
+}
+
+#advancedFilters .form-control-sm {
+    font-size: 0.875rem;
+}
+
+#advancedFilters .btn-outline-secondary {
+    border-color: var(--bs-secondary, #6c757d);
+    color: var(--bs-secondary, #6c757d);
+}
+
+#advancedFilters .btn-outline-secondary:hover {
+    background-color: var(--bs-secondary, #6c757d);
+    border-color: var(--bs-secondary, #6c757d);
+    color: var(--bs-white, white);
+}
+
+/* Collapsible button styling */
+button[data-target="#advancedFilters"] {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.15s ease-in-out;
+}
+
+/* Input group styling for search and filters */
+.input-group .btn-outline-secondary {
+    border-left: 0;
+    border-color: #ced4da;
+}
+
+.input-group .btn-outline-secondary:hover {
+    border-color: #adb5bd;
+    z-index: 2;
+}
+
+/* Ensure search results dropdown covers full width including button */
+#searchResults {
+    width: 100% !important;
+    left: 0 !important;
+}
+
+/* Ensure input group stays within container bounds */
+.container-fluid .input-group {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Fix for input group breaking container constraints */
+.input-group {
+    display: flex;
+    width: 100%;
+}
+
+/* Ensure container has proper max-width */
+.container-fluid {
+    max-width: 1200px;
+}
+
+/* Force proper width constraints for all form inputs */
+.container-fluid .form-control {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure Bootstrap grid columns respect container bounds */
+.container-fluid .row {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.container-fluid .col-12 {
+    padding-left: 0;
+    padding-right: 0;
+    max-width: 100%;
+}
+
+/* Dark mode specific overrides */
+@media (prefers-color-scheme: dark) {
+    #advancedFilters .card {
+        background-color: var(--bs-dark, #212529);
+        border-color: var(--bs-border-color-translucent, #495057);
+    }
+    
+    #advancedFilters .form-label {
+        color: var(--bs-body-color-rgb, #adb5bd);
+    }
+    
+    #advancedFilters .form-control {
+        background-color: var(--bs-dark, #212529);
+        border-color: var(--bs-border-color-translucent, #495057);
+        color: var(--bs-body-color, #fff);
+    }
+    
+    #advancedFilters .form-control:focus {
+        background-color: var(--bs-dark, #212529);
+        border-color: var(--bs-primary, #0d6efd);
+        color: var(--bs-body-color, #fff);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    #advancedFilters .custom-control-input:checked ~ .custom-control-label::before {
+        background-color: var(--bs-primary, #0d6efd);
+        border-color: var(--bs-primary, #0d6efd);
+    }
+    
+    #advancedFilters .custom-control-label {
+        color: var(--bs-body-color, #fff);
+    }
+}
+
+/* Bootstrap dark theme support */
+[data-bs-theme="dark"] #advancedFilters .card {
+    background-color: var(--bs-dark, #212529);
+    border-color: var(--bs-border-color-translucent, #495057);
+}
+
+[data-bs-theme="dark"] #advancedFilters .form-label {
+    color: var(--bs-body-color, #adb5bd);
+}
+
+[data-bs-theme="dark"] #advancedFilters .form-control {
+    background-color: var(--bs-dark, #212529);
+    border-color: var(--bs-border-color-translucent, #495057);
+    color: var(--bs-body-color, #fff);
+}
+
+[data-bs-theme="dark"] #advancedFilters .form-control:focus {
+    background-color: var(--bs-dark, #212529);
+    border-color: var(--bs-primary, #0d6efd);
+    color: var(--bs-body-color, #fff);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+[data-bs-theme="dark"] #advancedFilters .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--bs-primary, #0d6efd);
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+[data-bs-theme="dark"] #advancedFilters .custom-control-label {
+    color: var(--bs-body-color, #fff);
+}
+
+/* Existing dark mode system support */
+body.dark-mode #advancedFilters .card {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+body.dark-mode #advancedFilters .form-label {
+    color: #e2e8f0;
+}
+
+body.dark-mode #advancedFilters .form-control {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #fff;
+}
+
+body.dark-mode #advancedFilters .form-control:focus {
+    background-color: #2d3748;
+    border-color: #3182ce;
+    color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(49, 130, 206, 0.25);
+}
+
+body.dark-mode #advancedFilters .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #3182ce;
+    border-color: #3182ce;
+}
+
+body.dark-mode #advancedFilters .custom-control-label {
+    color: #e2e8f0;
+}
+
+body.dark-mode #advancedFilters .btn-outline-secondary {
+    border-color: #718096;
+    color: #718096;
+}
+
+body.dark-mode #advancedFilters .btn-outline-secondary:hover {
+    background-color: #718096;
+    border-color: #718096;
+    color: #fff;
+}
+
+/* Badge styling for dark mode */
+body.dark-mode button[data-target="#advancedFilters"] .badge {
+    background-color: #3182ce !important;
+    color: #fff !important;
+}
+
+/* Dark mode input group styling */
+body.dark-mode .input-group .btn-outline-secondary {
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+body.dark-mode .input-group .btn-outline-secondary:hover {
+    border-color: #718096;
+    background-color: #4a5568;
+    color: #fff;
 }
