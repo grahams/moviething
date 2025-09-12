@@ -265,10 +265,48 @@ apiRouter.get('/', async (req, res) => {
 apiRouter.post('/searchMovie', requireApiKey, async (req, res) => {
   try {
     const { title } = JSON.parse(req.body.json);
-    const url = `https://private.omdbapi.com/?apiKey=${process.env.MOVIETHING_OMDB_API_KEY}&s=${encodeURIComponent(title)}&type=movie`;
-    const response = await fetch(url);
-    const data = await response.json();
-    res.json(data);
+    
+    let allResults = [];
+    let page = 1;
+    let totalResults = 0;
+    let hasMorePages = true;
+    
+    // Fetch all pages of results
+    while (hasMorePages && page <= 10) { // Limit to 10 pages to prevent excessive API calls
+      const url = `https://private.omdbapi.com/?apiKey=${process.env.MOVIETHING_OMDB_API_KEY}&s=${encodeURIComponent(title)}&type=movie&page=${page}`;
+      const response = await fetch(url);
+      const pageData = await response.json();
+      
+      if (pageData.Response === 'False') {
+        // No more results or error
+        hasMorePages = false;
+        break;
+      }
+      
+      if (page === 1) {
+        totalResults = parseInt(pageData.totalResults) || 0;
+      }
+      
+      if (pageData.Search && pageData.Search.length > 0) {
+        allResults = allResults.concat(pageData.Search);
+      }
+      
+      // Check if we've fetched all available results
+      if (allResults.length >= totalResults || pageData.Search.length < 10) {
+        hasMorePages = false;
+      }
+      
+      page++;
+    }
+    
+    // Return combined results in the same format as the original API
+    const combinedData = {
+      Search: allResults,
+      totalResults: totalResults.toString(),
+      Response: 'True'
+    };
+    
+    res.jsonc(combinedData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
