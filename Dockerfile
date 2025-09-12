@@ -23,6 +23,15 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 ENV SERVER_PORT=3000
-HEALTHCHECK --interval=60m --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD sh -c 'curl -f http://localhost:${SERVER_PORT}/api/health || exit 1'
-CMD ["sh", "-c", "npm start"] 
+
+# Create a startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Waiting for dependencies..."\n\
+sleep 5\n\
+echo "Starting MovieThing application..."\n\
+exec npm start' > /start.sh && chmod +x /start.sh
+
+CMD ["/start.sh"] 

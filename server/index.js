@@ -38,27 +38,41 @@ const pool = mariadb.createPool({
   user: process.env.MOVIETHING_SQL_USER,
   password: process.env.MOVIETHING_SQL_PASS,
   database: process.env.MOVIETHING_SQL_DB,
-  connectionLimit: 5
+  connectionLimit: 5,
+  acquireTimeout: 60000, // 60 seconds
+  timeout: 60000, // 60 seconds
+  reconnect: true,
+  resetAfterUse: true
 });
 
-// Test database connection
-async function testConnection() {
+// Test database connection with retry logic
+async function testConnection(maxRetries = 10, delayMs = 5000) {
   if (process.env.NODE_ENV === 'test') {
     console.log('Skipping database connection test in test environment');
     return { success: true };
   }
   
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    console.log('Successfully connected to MariaDB');
-    return { success: true };
-  } catch (err) {
-    console.error('Database connection failed:', err);
-    console.log('Server will start but database operations will fail until connection is restored');
-    return { success: false, error: err.message };
-  } finally {
-    if (conn) conn.release();
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let conn;
+    try {
+      console.log(`Database connection attempt ${attempt}/${maxRetries}...`);
+      conn = await pool.getConnection();
+      await conn.query('SELECT 1 as test');
+      console.log('Successfully connected to MariaDB');
+      return { success: true };
+    } catch (err) {
+      console.error(`Database connection attempt ${attempt} failed:`, err.message);
+      
+      if (attempt === maxRetries) {
+        console.error('All database connection attempts failed. Server will start but database operations will fail until connection is restored');
+        return { success: false, error: err.message };
+      }
+      
+      console.log(`Waiting ${delayMs}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    } finally {
+      if (conn) conn.release();
+    }
   }
 }
 
@@ -388,23 +402,46 @@ app.use(express.static(path.join(__dirname, '..', 'client')));
 
 
 // Export the app and createServer function
-const createServer = () => {
+const createServer = async () => {
   const port = process.env.SERVER_PORT || 3000;
   
-  // Test database connection before starting server
-  testConnection().then((result) => {
-    return app.listen(port, () => {
-      console.log(`Server running on port ${port}`);
-      console.log('Environment:', process.env.NODE_ENV);
-      console.log('Database host:', process.env.MOVIETHING_SQL_HOST);
+  try {
+    console.log('Starting MovieThing server...');
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Database host:', process.env.MOVIETHING_SQL_HOST);
+    
+    // Test database connection before starting server
+    const result = await testConnection();
+    
+    const server = app.listen(port, () => {
+      console.log(`✅ Server running on port ${port}`);
       if (!result.success) {
         console.log('⚠️  Database connection failed at startup. Use /api/health to check status.');
+      } else {
+        console.log('✅ Database connection successful');
       }
     });
-  }).catch(err => {
+
+    // Graceful shutdown handling
+    const gracefulShutdown = (signal) => {
+      console.log(`\n${signal} received. Shutting down gracefully...`);
+      server.close(() => {
+        console.log('HTTP server closed.');
+        pool.end(() => {
+          console.log('Database pool closed.');
+          process.exit(0);
+        });
+      });
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    return server;
+  } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
-  });
+  }
 };
 
 // Export both the app, server creation function, and helper functions
