@@ -407,6 +407,11 @@ $(document).ready(function() {
     
     // Mobile-friendly review tooltip functionality
     $(document).on('click', '.movie-table td[data-review]', function(e) {
+        // Don't intercept clicks on links - let them work normally
+        if ($(e.target).is('a')) {
+            return;
+        }
+        
         e.preventDefault();
         var $cell = $(this);
         var review = $cell.attr('data-review');
