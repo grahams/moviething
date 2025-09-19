@@ -390,6 +390,64 @@ $(document).ready(function() {
         // Apply Highcharts theme and redraw charts
         applyHighchartsTheme(!isDark);
         redrawAllCharts();
+        
+        // Update mobile tooltip styling if it exists
+        var $tooltip = $('#mobile-review-tooltip');
+        if ($tooltip.length > 0) {
+            var bgColor = !isDark ? '#2c2f31' : '#333';
+            var textColor = !isDark ? '#e0e0e0' : 'white';
+            var borderColor = !isDark ? '#444' : 'transparent';
+            $tooltip.css({
+                'background': bgColor,
+                'color': textColor,
+                'border-color': borderColor
+            });
+        }
+    });
+    
+    // Mobile-friendly review tooltip functionality
+    $(document).on('click', '.movie-table td[data-review]', function(e) {
+        e.preventDefault();
+        var $cell = $(this);
+        var review = $cell.attr('data-review');
+        
+        if (review) {
+            // Create or update tooltip
+            var $tooltip = $('#mobile-review-tooltip');
+            if ($tooltip.length === 0) {
+                var isDark = $('body').hasClass('dark-mode');
+                var bgColor = isDark ? '#2c2f31' : '#333';
+                var textColor = isDark ? '#e0e0e0' : 'white';
+                var borderColor = isDark ? '#444' : 'transparent';
+                
+                $tooltip = $('<div id="mobile-review-tooltip" style="position: fixed; background: ' + bgColor + '; color: ' + textColor + '; padding: 12px; border-radius: 6px; max-width: 300px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.9em; line-height: 1.4; border: 1px solid ' + borderColor + ';"></div>');
+                $('body').append($tooltip);
+            }
+            
+            // Position tooltip near the clicked cell
+            var cellRect = this.getBoundingClientRect();
+            var tooltipTop = cellRect.bottom + 5;
+            var tooltipLeft = cellRect.left;
+            
+            // Adjust if tooltip would go off screen
+            if (tooltipLeft + 300 > window.innerWidth) {
+                tooltipLeft = window.innerWidth - 320;
+            }
+            if (tooltipTop + 100 > window.innerHeight) {
+                tooltipTop = cellRect.top - 100;
+            }
+            
+            $tooltip.css({
+                top: tooltipTop + 'px',
+                left: tooltipLeft + 'px',
+                display: 'block'
+            }).text(review);
+            
+            // Hide tooltip when clicking elsewhere
+            $(document).one('click', function() {
+                $tooltip.hide();
+            });
+        }
     });
 });
 
@@ -795,6 +853,11 @@ var prepareListData = function(data) {
         var link = $("<a />", { 'href': row.movieURL, 'text': title });
         if(row.firstViewing !== 1) {
             link.css("font-style", "italic");
+        }
+        // Add review as data attribute for mobile access
+        if(row.movieReview) {
+            titleCell.attr('data-review', row.movieReview);
+            titleCell.attr('title', 'Review: ' + row.movieReview);
         }
         titleCell.append(link);
         var reviewCell = $("<td />").text(row.movieReview);

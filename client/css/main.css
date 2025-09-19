@@ -215,6 +215,30 @@ body.dark-mode .movie-table tr:hover {
     background-color: #2c2f31;
 }
 
+/* Dark mode responsive table styles */
+@media (max-width: 768px) {
+    body.dark-mode .movie-table th, 
+    body.dark-mode .movie-table td {
+        padding: 6px 4px;
+        font-size: 0.9em;
+    }
+    
+    /* Dark mode mobile review tooltip */
+    body.dark-mode .movie-table td[data-review]:hover:after {
+        background: #2c2f31;
+        color: #e0e0e0;
+        border: 1px solid #444;
+    }
+}
+
+@media (max-width: 480px) {
+    body.dark-mode .movie-table th, 
+    body.dark-mode .movie-table td {
+        padding: 4px 2px;
+        font-size: 0.8em;
+    }
+}
+
 /* ==========================================================================
    Helper classes
    ========================================================================== */
@@ -395,6 +419,101 @@ body.dark-mode .movie-table tr:hover {
 /* ==========================================================================
    Custom styles for MovieThing
    ========================================================================== */
+
+/* Responsive movie table styles */
+.movie-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.movie-table th, .movie-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.movie-table td.viewing-date-cell {
+    white-space: nowrap;
+}
+
+.movie-table td.location-cell {
+    white-space: nowrap;
+}
+
+.movie-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.movie-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Hide review column on narrow screens (mobile/tablet portrait) */
+@media (max-width: 768px) {
+    .movie-table th:nth-child(2),
+    .movie-table td:nth-child(2) {
+        display: none;
+    }
+    
+    /* Make remaining columns more compact */
+    .movie-table th, .movie-table td {
+        padding: 6px 4px;
+        font-size: 0.9em;
+    }
+    
+    /* Ensure title column takes more space */
+    .movie-table th:first-child,
+    .movie-table td:first-child {
+        width: 50%;
+    }
+    
+    /* Style title cells with review data on mobile */
+    .movie-table td[data-review] {
+        position: relative;
+        cursor: help;
+    }
+    
+    .movie-table td[data-review]:after {
+        content: "📝";
+        font-size: 0.8em;
+        margin-left: 4px;
+        opacity: 0.7;
+    }
+    
+    /* Show review on hover/touch for mobile */
+    .movie-table td[data-review]:hover:after {
+        content: attr(data-review);
+        position: absolute;
+        background: #333;
+        color: white;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        white-space: normal;
+        max-width: 200px;
+        z-index: 1000;
+        top: 100%;
+        left: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+}
+
+/* For very narrow screens (small phones) */
+@media (max-width: 480px) {
+    .movie-table th, .movie-table td {
+        padding: 4px 2px;
+        font-size: 0.8em;
+    }
+    
+    /* Stack date and location vertically or make them more compact */
+    .movie-table td.viewing-date-cell,
+    .movie-table td.location-cell {
+        white-space: normal;
+        word-break: break-word;
+    }
+}
 
 /* Advanced Filters styling with dark mode support */
 #advancedFilters .card {
