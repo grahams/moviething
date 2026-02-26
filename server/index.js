@@ -483,6 +483,10 @@ apiRouter.post('/getMovieDetails', async (req, res) => {
 apiRouter.post('/newEntry', requireAuth, async (req, res) => {
   let conn;
   try {
+    if (!req.body.json) {
+      console.error('newEntry: req.body.json is missing. req.body:', JSON.stringify(req.body));
+      return res.status(400).json({ Error: 'Missing request body. If you are behind a reverse proxy, ensure it is configured to forward the request body.' });
+    }
     const {
       movieTitle,
       viewingDate,
