@@ -99,11 +99,12 @@ const apiRouter = express.Router();
 //   1. A non-empty X-Authentik-Username header — trusted because Authentik injects it at the
 //      reverse-proxy layer. The Node server must not be directly internet-accessible for this
 //      to be safe.
-//   2. The correct MOVIETHING_VALID_API_KEY value in the request body or query string, for
-//      external (non-UI) API clients such as scripts or curl.
+//   2. The correct MOVIETHING_VALID_API_KEY value in the X-Api-Key request header, for
+//      external (non-UI) API clients such as scripts or curl. Traefik routes requests carrying
+//      this header directly to the backend, bypassing the Authentik ForwardAuth middleware.
 const requireAuth = (req, res, next) => {
   const authentikUser = req.headers['x-authentik-username'];
-  const apiKey = req.body.apiKey || req.query.apiKey;
+  const apiKey = req.headers['x-api-key'];
 
   if ((authentikUser && authentikUser.trim() !== '') ||
       (apiKey && apiKey === process.env.MOVIETHING_VALID_API_KEY)) {

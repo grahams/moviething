@@ -333,15 +333,13 @@ describe('Movie API Endpoints', () => {
         .expect(200);
     });
 
-    it('should accept a request with a valid API key and no X-Authentik-Username header', async () => {
+    it('should accept a request with a valid X-Api-Key header and no X-Authentik-Username header', async () => {
       mockConnection.query.mockResolvedValueOnce({ affectedRows: 1 });
 
       await request(app)
         .post('/api/newEntry')
-        .send({
-          apiKey: process.env.MOVIETHING_VALID_API_KEY,
-          json: JSON.stringify(validEntry)
-        })
+        .set('X-Api-Key', process.env.MOVIETHING_VALID_API_KEY)
+        .send({ json: JSON.stringify(validEntry) })
         .expect(200);
     });
 
