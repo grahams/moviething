@@ -94,11 +94,20 @@ app.use((err, req, res, next) => {
 // Create API router
 const apiRouter = express.Router();
 
-// API Key middleware
-const requireApiKey = (req, res, next) => {
-  const apiKey = req.body.apiKey || req.query.apiKey;
-  
-  if (apiKey && apiKey === process.env.MOVIETHING_VALID_API_KEY) {
+// Auth middleware for write endpoints.
+// Accepts either:
+//   1. A non-empty X-Authentik-Username header — trusted because Authentik injects it at the
+//      reverse-proxy layer. The Node server must not be directly internet-accessible for this
+//      to be safe.
+//   2. The correct MOVIETHING_VALID_API_KEY value in the X-Api-Key request header, for
+//      external (non-UI) API clients such as scripts or curl. Traefik routes requests carrying
+//      this header directly to the backend, bypassing the Authentik ForwardAuth middleware.
+const requireAuth = (req, res, next) => {
+  const authentikUser = req.headers['x-authentik-username'];
+  const apiKey = req.headers['x-api-key'];
+
+  if ((authentikUser && authentikUser.trim() !== '') ||
+      (apiKey && apiKey === process.env.MOVIETHING_VALID_API_KEY)) {
     next();
   } else {
     res.status(401).json({ error: 'Unauthorized' });
@@ -262,7 +271,7 @@ apiRouter.get('/', async (req, res) => {
   }
 });
 
-apiRouter.post('/searchMovie', requireApiKey, async (req, res) => {
+apiRouter.post('/searchMovie', async (req, res) => {
   try {
     const { 
       title, 
@@ -392,7 +401,7 @@ apiRouter.post('/searchMovie', requireApiKey, async (req, res) => {
   }
 });
 
-apiRouter.post('/getMovieDetails', requireApiKey, async (req, res) => {
+apiRouter.post('/getMovieDetails', async (req, res) => {
   try {
     const { tmdbID } = JSON.parse(req.body.json);
     
@@ -472,9 +481,13 @@ apiRouter.post('/getMovieDetails', requireApiKey, async (req, res) => {
   }
 });
 
-apiRouter.post('/newEntry', requireApiKey, async (req, res) => {
+apiRouter.post('/newEntry', requireAuth, async (req, res) => {
   let conn;
   try {
+    if (!req.body.json) {
+      console.error('newEntry: req.body.json is missing. req.body:', JSON.stringify(req.body));
+      return res.status(400).json({ Error: 'Missing request body. If you are behind a reverse proxy, ensure it is configured to forward the request body.' });
+    }
     const {
       movieTitle,
       viewingDate,

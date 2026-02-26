@@ -54,14 +54,7 @@ describe('Movie API Endpoints', () => {
   });
 
   describe('POST /api/searchMovie', () => {
-    it('should require API key', async () => {
-      await request(app)
-        .post('/api/searchMovie')
-        .send({ json: JSON.stringify({ title: 'Test' }) })
-        .expect(401);
-    });
-
-    it('should search for movies with valid API key', async () => {
+    it('should search for movies without requiring auth', async () => {
       const mockTmdbResponse = { 
         results: [{ 
           id: 123, 
@@ -85,7 +78,6 @@ describe('Movie API Endpoints', () => {
         .post('/api/searchMovie')
         .send({ 
           json: JSON.stringify({ title: 'Test' }),
-          apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
     });
@@ -124,7 +116,6 @@ describe('Movie API Endpoints', () => {
         .post('/api/searchMovie')
         .send({ 
           json: JSON.stringify({ title: 'Test', exclude_videos: true }),
-          apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
 
@@ -170,7 +161,6 @@ describe('Movie API Endpoints', () => {
         .post('/api/searchMovie')
         .send({ 
           json: JSON.stringify({ title: 'Test', min_popularity: 75 }),
-          apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
 
@@ -217,7 +207,6 @@ describe('Movie API Endpoints', () => {
         .post('/api/searchMovie')
         .send({ 
           json: JSON.stringify({ title: 'Test', min_vote_average: 7.0 }),
-          apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
 
@@ -260,7 +249,6 @@ describe('Movie API Endpoints', () => {
         .post('/api/searchMovie')
         .send({ 
           json: JSON.stringify({ title: 'Test', min_release_date: '2023-01-01' }),
-          apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
 
@@ -314,13 +302,52 @@ describe('Movie API Endpoints', () => {
             min_vote_average: 7.0,
             min_release_date: '2023-07-01'
           }),
-          apiKey: process.env.MOVIETHING_VALID_API_KEY
         })
         .expect(200);
 
       // Should only return the movie that meets all criteria
       expect(response.body.Search).toHaveLength(1);
       expect(response.body.Search[0].Title).toBe('Good Movie');
+    });
+  });
+
+  describe('POST /api/newEntry', () => {
+    const validEntry = {
+      movieTitle: 'Test Movie',
+      viewingDate: '01/01/2024',
+      movieURL: 'https://www.imdb.com/title/tt1234567/',
+      viewFormat: 'Digital',
+      viewLocation: 'Home',
+      movieGenre: 'Action',
+      movieReview: 'Great movie!',
+      firstViewing: true
+    };
+
+    it('should accept a request with a valid X-Authentik-Username header and no API key', async () => {
+      mockConnection.query.mockResolvedValueOnce({ affectedRows: 1 });
+
+      await request(app)
+        .post('/api/newEntry')
+        .set('X-Authentik-Username', 'testuser')
+        .send({ json: JSON.stringify(validEntry) })
+        .expect(200);
+    });
+
+    it('should accept a request with a valid X-Api-Key header and no X-Authentik-Username header', async () => {
+      mockConnection.query.mockResolvedValueOnce({ affectedRows: 1 });
+
+      await request(app)
+        .post('/api/newEntry')
+        .set('X-Api-Key', process.env.MOVIETHING_VALID_API_KEY)
+        .send({ json: JSON.stringify(validEntry) })
+        .expect(200);
+    });
+
+    it('should reject a request with neither header nor API key', async () => {
+      await request(app)
+        .post('/api/newEntry')
+        .send({ json: JSON.stringify(validEntry) })
+        .expect(401);
     });
   });
 

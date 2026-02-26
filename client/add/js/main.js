@@ -88,6 +88,9 @@ var viewConfig = [
 ];
 
 $(document).ready(function() {
+    // Clean up stale API key from localStorage (no longer used)
+    localStorage.removeItem("moviesAPIKey");
+
     // Apply dark mode based on saved preference or system default
     var darkPref = localStorage.getItem('darkMode');
     if (darkPref === 'true') {
@@ -97,17 +100,6 @@ $(document).ready(function() {
     } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         $('body').addClass('dark-mode');
     }
-
-    var apiKey = localStorage.getItem("moviesAPIKey");
-
-    if(apiKey) {
-        $("#apiKey").val(apiKey);
-    }
-
-    $("#apiKey").on("change", function(e) {
-        localStorage.setItem("moviesAPIKey", $("#apiKey").val());
-    })
-
 
     // Add keyup event for real-time search
     $("#searchName").on("keyup", function(e) {
@@ -170,8 +162,7 @@ $(document).ready(function() {
 	});
 
 	$("#formSubmit").click(function() {
-        var data = {apiKey: $("#apiKey").val(),
-                    json: assembleData()};
+        var data = {json: assembleData()};
 
         jQuery.post({
             url: `${API_BASE_URL}/newEntry`,
@@ -223,7 +214,6 @@ var searchMovie = function(title) {
     updateFilterIndicator(j);
 
     var data = {
-        apiKey: $("#apiKey").val(),
         json: JSON.stringify(j)
     };
 
@@ -271,8 +261,7 @@ var searchMovie = function(title) {
 var getMovieDetails = function(tmdbId) {
     var j = {"tmdbID": tmdbId};
 
-    var data = {apiKey: $("#apiKey").val(),
-                json: JSON.stringify(j)};
+    var data = {json: JSON.stringify(j)};
 
     jQuery.post({
         url: `${API_BASE_URL}/getMovieDetails`,
