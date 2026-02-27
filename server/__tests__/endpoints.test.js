@@ -21,7 +21,7 @@ describe('Movie API Endpoints', () => {
     it('should return movies for the current year', async () => {
       const mockMovies = [
         {
-          id: 1,
+          id: BigInt(1),
           movieTitle: 'Test Movie',
           viewingDate: new Date('2024-01-01'),
           movieURL: 'https://www.imdb.com/title/tt1234567/',
