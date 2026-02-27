@@ -1,6 +1,12 @@
 // Use same-origin API base URL
 const API_BASE_URL = window.location.origin + '/api';
 
+// Helper to read a query parameter from the current URL
+function getQueryParam(name) {
+    var match = window.location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+    return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
+}
+
 var theatreNames = [
     "Brattle Theatre",
     "Coolidge Corner Theatre",
@@ -161,25 +167,92 @@ $(document).ready(function() {
         checkFormCompleted();
 	});
 
-	$("#formSubmit").click(function() {
-        var data = {json: assembleData()};
+    var editId = getQueryParam('edit');
 
-        jQuery.post({
-            url: `${API_BASE_URL}/newEntry`,
-            data: data
+    if (editId) {
+        // Hide the TMDB search section in edit mode
+        $('#searchForm').hide();
+
+        // Change submit button label
+        $('#formSubmit').text('Save Changes');
+
+        // Hide success message whenever the user changes the form
+        $('#movieForm').on('change keyup', function() {
+            $('#editSuccessMsg').hide();
+        });
+
+        // Override submit to PUT instead of POST (auth via Authentik header, no apiKey needed)
+        $('#formSubmit').click(function() {
+            var data = { json: assembleData() };
+            $.ajax({
+                url: `${API_BASE_URL}/entry/${editId}`,
+                method: 'PUT',
+                data: data
+            })
+            .done(function(result) {
+                if (result.error) {
+                    alert(result.error);
+                } else {
+                    $('#editSuccessMsg').show();
+                }
+            })
+            .fail(function() {
+                alert('Failed to save changes.');
+            });
+        });
+
+        // Fetch entry data and pre-populate form (GET /api/entry/:id is public)
+        $.get(`${API_BASE_URL}/entry/${editId}`)
+        .done(function(entry) {
+            // Show edit mode heading with movie title
+            $('#editMovieTitle').text(entry.movieTitle);
+            $('#editModeHeading').show();
+
+            // Pre-populate form fields
+            $('#movieTitle').val(entry.movieTitle);
+            $('#movieURL').val(entry.movieURL);
+
+            // Set date via datepicker — split YYYY-MM-DD to avoid UTC timezone shift
+            var parts = entry.viewingDate.split('-');
+            $('#viewingDate').datepicker('setDate', new Date(parts[0], parts[1] - 1, parts[2]));
+
+            // Set format and trigger change to populate location dropdown
+            $('#viewFormat').val(entry.viewFormat).trigger('change');
+            // Set location after dropdown has been populated
+            $('#viewLocation').val(entry.viewLocation);
+
+            $('#firstViewing').prop('checked', entry.firstViewing === 1 || entry.firstViewing === true);
+            $('#movieGenre').val(entry.movieGenre);
+            $('#movieReview').val(entry.movieReview);
+
+            checkFormCompleted();
         })
-        .done(function(data) {
-            if(data.Error) {
-                alert(data.Error);
-            }
-            else {
-                alert( "Success!" );
-            }
-        })
-        .fail(function(data) {
-            console.log( "error" );
-        })
-	});
+        .fail(function() {
+            alert('Failed to load entry for editing.');
+        });
+
+    } else {
+        // Normal add mode submit handler (auth via Authentik header)
+        $('#formSubmit').click(function() {
+            var data = {json: assembleData()};
+
+            jQuery.post({
+                url: `${API_BASE_URL}/newEntry`,
+                data: data
+            })
+            .done(function(data) {
+                if(data.Error) {
+                    alert(data.Error);
+                }
+                else {
+                    alert( "Success!" );
+                }
+            })
+            .fail(function(data) {
+                console.log( "error" );
+            })
+        });
+    }
 });
 
 var updateViewLocations = function(viewItem) {

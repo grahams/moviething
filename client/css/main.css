@@ -441,6 +441,34 @@ body.dark-mode .movie-table tr:hover {
     white-space: nowrap;
 }
 
+.movie-table td.edit-cell {
+    white-space: nowrap;
+    width: 1%;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+a.edit-entry-link {
+    font-size: 0.85em;
+    color: #aaa;
+    text-decoration: none;
+    opacity: 0.6;
+}
+
+a.edit-entry-link:hover {
+    opacity: 1;
+    color: #555;
+    text-decoration: none;
+}
+
+body.dark-mode a.edit-entry-link {
+    color: #888;
+}
+
+body.dark-mode a.edit-entry-link:hover {
+    color: #ccc;
+}
+
 .movie-table th {
     background-color: #f5f5f5;
     font-weight: bold;
