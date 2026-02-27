@@ -21,6 +21,7 @@ describe('Movie API Endpoints', () => {
     it('should return movies for the current year', async () => {
       const mockMovies = [
         {
+          id: 1,
           movieTitle: 'Test Movie',
           viewingDate: new Date('2024-01-01'),
           movieURL: 'https://www.imdb.com/title/tt1234567/',
@@ -41,6 +42,7 @@ describe('Movie API Endpoints', () => {
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0].movieTitle).toBe('Test Movie');
+      expect(response.body[0].id).toBe(1);
       expect(mockConnection.query).toHaveBeenCalled();
     });
 
@@ -394,6 +396,110 @@ describe('Movie API Endpoints', () => {
           message: 'Database check skipped in test environment'
         }
       });
+    });
+  });
+
+  describe('GET /api/entry/:id', () => {
+    it('should return a single entry by id without auth (public endpoint)', async () => {
+      const mockEntry = {
+        id: BigInt(42),
+        movieTitle: 'Test Movie',
+        viewingDate: new Date('2024-06-15'),
+        movieURL: 'https://www.imdb.com/title/tt1234567/',
+        viewFormat: 'Digital',
+        viewLocation: 'Home',
+        firstViewing: 1,
+        movieGenre: 'Action',
+        movieReview: 'Great movie!'
+      };
+
+      mockConnection.query.mockResolvedValueOnce([mockEntry]);
+
+      const response = await request(app)
+        .get('/api/entry/42')
+        .expect(200);
+
+      expect(response.body.id).toBe(42);
+      expect(response.body.movieTitle).toBe('Test Movie');
+      expect(response.body.viewingDate).toBe('2024-06-15');
+      expect(response.body.firstViewing).toBe(1);
+    });
+
+    it('should return 404 when entry does not exist', async () => {
+      mockConnection.query.mockResolvedValueOnce([]);
+
+      await request(app)
+        .get('/api/entry/999')
+        .expect(404);
+    });
+  });
+
+  describe('PUT /api/entry/:id', () => {
+    const validBody = {
+      movieTitle: 'Test Movie',
+      viewingDate: '01/15/2024',
+      viewFormat: 'Digital',
+      viewLocation: 'Home',
+      movieGenre: 'Action',
+      movieReview: 'Updated review',
+      firstViewing: true
+    };
+
+    it('should update an existing entry with X-Api-Key header', async () => {
+      // First query: existence check; second query: UPDATE
+      mockConnection.query
+        .mockResolvedValueOnce([{ id: 42 }])
+        .mockResolvedValueOnce({ affectedRows: 1 });
+
+      const response = await request(app)
+        .put('/api/entry/42')
+        .set('X-Api-Key', process.env.MOVIETHING_VALID_API_KEY)
+        .send({ json: JSON.stringify(validBody) })
+        .expect(200);
+
+      expect(response.body).toEqual({ OK: 'Updated' });
+    });
+
+    it('should update an existing entry with X-Authentik-Username header', async () => {
+      mockConnection.query
+        .mockResolvedValueOnce([{ id: 42 }])
+        .mockResolvedValueOnce({ affectedRows: 1 });
+
+      const response = await request(app)
+        .put('/api/entry/42')
+        .set('X-Authentik-Username', 'testuser')
+        .send({ json: JSON.stringify(validBody) })
+        .expect(200);
+
+      expect(response.body).toEqual({ OK: 'Updated' });
+    });
+
+    it('should return 404 when entry does not exist', async () => {
+      mockConnection.query.mockResolvedValueOnce([]);
+
+      await request(app)
+        .put('/api/entry/999')
+        .set('X-Api-Key', process.env.MOVIETHING_VALID_API_KEY)
+        .send({ json: JSON.stringify(validBody) })
+        .expect(404);
+    });
+
+    it('should return 400 when required fields are missing', async () => {
+      const bodyMissingTitle = { ...validBody };
+      delete bodyMissingTitle.movieTitle;
+
+      await request(app)
+        .put('/api/entry/42')
+        .set('X-Api-Key', process.env.MOVIETHING_VALID_API_KEY)
+        .send({ json: JSON.stringify(bodyMissingTitle) })
+        .expect(400);
+    });
+
+    it('should return 401 without any auth', async () => {
+      await request(app)
+        .put('/api/entry/42')
+        .send({ json: JSON.stringify(validBody) })
+        .expect(401);
     });
   });
 }); 

@@ -24,7 +24,12 @@
         <div class="mb-3">
             <a href="/" class="btn btn-outline-primary">← Back to Charts</a>
         </div>
-        <form>
+
+        <div id="editModeHeading" style="display:none;" class="mb-3">
+            <h4>Editing: <span id="editMovieTitle"></span></h4>
+        </div>
+
+        <form id="searchForm">
             <div class="row">
                 <div class="col-12">
                     <div class="position-relative">
@@ -163,6 +168,7 @@
             <div class="row custom-control custom-button">
                 <div class="col-12 position-relative">
                     <button id="formSubmit" type="button" class="btn btn-primary" disabled="disabled">Submit</button>
+                    <div id="editSuccessMsg" class="alert alert-success mt-2" style="display:none;">Entry updated successfully.</div>
                 </div>
             </div>
         </form>

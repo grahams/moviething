@@ -868,11 +868,19 @@ var prepareListData = function(data) {
         var reviewCell = $("<td />").text(row.movieReview);
         var viewingDateCell = $("<td />").addClass("viewing-date-cell").text(row.viewingDate ? row.viewingDate.slice(0, 10) : "");
         var locationCell = $("<td />").addClass("location-cell").text(row.viewLocation || "");
+        var editLink = $("<a />", {
+            'href': '/add?edit=' + row.id,
+            'text': '✏',
+            'title': 'Edit entry',
+            'class': 'edit-entry-link'
+        });
+        var editCell = $("<td />").addClass("edit-cell").append(editLink);
         var rowElem = $("<tr />")
             .append(titleCell)
             .append(reviewCell)
             .append(viewingDateCell)
-            .append(locationCell);
+            .append(locationCell)
+            .append(editCell);
         $("#movieList tbody").append(rowElem);
     });
 };

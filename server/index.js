@@ -124,7 +124,7 @@ async function getRowsBetweenDates(startDate, endDate) {
   try {
     conn = await pool.getConnection();
     const rows = await conn.query(
-      'SELECT movieTitle, viewingDate, movieURL, viewFormat, viewLocation, firstViewing, movieGenre, movieReview ' +
+      'SELECT id, movieTitle, viewingDate, movieURL, viewFormat, viewLocation, firstViewing, movieGenre, movieReview ' +
       'FROM movies WHERE viewingDate BETWEEN ? AND ?',
       [startDate, endDate]
     );
@@ -254,6 +254,7 @@ apiRouter.get('/', async (req, res) => {
   try {
     const rows = await getRowsBetweenDates(startDate, endDate);
     const results = rows.map(row => ({
+      id: Number(row.id),
       movieTitle: row.movieTitle,
       viewingDate: row.viewingDate ? row.viewingDate.toISOString().split('T')[0] : null,
       movieURL: row.movieURL,
@@ -518,6 +519,84 @@ apiRouter.post('/newEntry', requireAuth, async (req, res) => {
       res.status(503).json({ Error: 'Database connection failed' });
     } else {
       res.status(500).json({ Error: 'Param Error' });
+    }
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+apiRouter.get('/entry/:id', async (req, res) => {
+  let conn;
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection not available' });
+    }
+    conn = await pool.getConnection();
+    const rows = await conn.query('SELECT * FROM movies WHERE id = ?', [req.params.id]);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const row = rows[0];
+    res.json({
+      id: Number(row.id),
+      movieTitle: row.movieTitle,
+      viewingDate: row.viewingDate ? row.viewingDate.toISOString().split('T')[0] : null,
+      movieURL: row.movieURL,
+      viewFormat: row.viewFormat,
+      viewLocation: row.viewLocation,
+      firstViewing: row.firstViewing,
+      movieGenre: row.movieGenre,
+      movieReview: row.movieReview
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+apiRouter.put('/entry/:id', requireAuth, async (req, res) => {
+  let conn;
+  try {
+    const {
+      movieTitle,
+      viewingDate,
+      viewFormat,
+      viewLocation,
+      movieGenre,
+      movieReview,
+      firstViewing
+    } = JSON.parse(req.body.json);
+
+    if (!movieTitle || !viewingDate) {
+      return res.status(400).json({ error: 'movieTitle and viewingDate are required' });
+    }
+
+    const parsedDate = parseDate(viewingDate, 'MM/dd/yyyy', new Date()).toISOString().split('T')[0];
+
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection not available' });
+    }
+    conn = await pool.getConnection();
+
+    const existing = await conn.query('SELECT id FROM movies WHERE id = ?', [req.params.id]);
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    await conn.query(
+      'UPDATE movies SET viewingDate = ?, viewFormat = ?, viewLocation = ?, movieGenre = ?, movieReview = ?, firstViewing = ? WHERE id = ?',
+      [parsedDate, viewFormat, viewLocation, movieGenre, movieReview, firstViewing ? 1 : 0, req.params.id]
+    );
+
+    res.json({ OK: 'Updated' });
+  } catch (err) {
+    console.error(err);
+    if (err.message && err.message.includes('Database connection')) {
+      res.status(503).json({ error: 'Database connection failed' });
+    } else {
+      res.status(500).json({ error: 'Internal server error' });
     }
   } finally {
     if (conn) conn.release();
