@@ -573,7 +573,7 @@ body.dark-mode a.edit-entry-link:hover {
 }
 
 /* Collapsible button styling */
-button[data-target="#advancedFilters"] {
+button[data-bs-target="#advancedFilters"] {
     font-size: 0.875rem;
     padding: 0.375rem 0.75rem;
     transition: all 0.15s ease-in-out;
@@ -741,7 +741,7 @@ body.dark-mode #advancedFilters .btn-outline-secondary:hover {
 }
 
 /* Badge styling for dark mode */
-body.dark-mode button[data-target="#advancedFilters"] .badge {
+body.dark-mode button[data-bs-target="#advancedFilters"] .badge {
     background-color: #3182ce !important;
     color: #fff !important;
 }
