@@ -7,91 +7,149 @@ function getQueryParam(name) {
     return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
 }
 
-var theatreNames = [
-    "Brattle Theatre",
-    "Coolidge Corner Theatre",
-    "Regal Fenway Stadium 13",
-    "Kendall Square Cinema",
-    "Somerville Theatre",
-    "Embassy Theatre",
-    "AMC Assembly Row 12",
-    "Majestic 7 Watertown",
-    "Cinemark Superlux",
-    "Jordan's IMAX Reading",
-    "Jordan's IMAX Natick",
-    "AMC Boston Common 19",
-    "AMC South Bay Center 12",
-    "Apple Cinemas",
-    "Other"
-];
-
-
-var homeNames = [
-	"Home",
-	"Virginia",
-	"Michigan",
-	"Rochester",
-	"Hopatcong",
-	"Other"
-];
-
-var viewConfig = [
-    { 
+var config = {
+    theatreNames: [
+        "Brattle Theatre",
+        "Coolidge Corner Theatre",
+        "Regal Fenway Stadium 13",
+        "Kendall Square Cinema",
+        "Somerville Theatre",
+        "Embassy Theatre",
+        "AMC Assembly Row 12",
+        "Majestic 7 Watertown",
+        "Cinemark Superlux",
+        "Jordan's IMAX Reading",
+        "Jordan's IMAX Natick",
+        "AMC Boston Common 19",
+        "AMC South Bay Center 12",
+        "Apple Cinemas",
+        "Other"
+    ],
+    homeNames: [
+        "Home",
+        "Virginia",
+        "Michigan",
+        "Rochester",
+        "Hopatcong",
+        "Other"
+    ]
+};
+config.views = [
+    {
         name: "Theater",
-        locations: theatreNames,
+        locations: config.theatreNames,
         defaultLocation: null
     },
     {
-	    name: "Apple TV",
-        locations: homeNames,
+        name: "Apple TV",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "Download",
-        locations: homeNames,
+        name: "Download",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "Netflix",
-        locations: homeNames,
+        name: "Netflix",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "Disney+",
-        locations: homeNames,
+        name: "Disney+",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "Amazon Prime",
-        locations: homeNames,
+        name: "Amazon Prime",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "Blu-ray",
-        locations: homeNames,
+        name: "Blu-ray",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "DVD",
-        locations: homeNames,
+        name: "DVD",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "TV",
-        locations: homeNames,
+        name: "TV",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "IFFBoston",
-        locations: homeNames,
+        name: "IFFBoston",
+        locations: config.homeNames,
         defaultLocation: "Home"
     },
     {
-	    name: "Other",
-        locations: homeNames,
+        name: "Other",
+        locations: config.homeNames,
         defaultLocation: "Home"
     }
 ];
+
+function handleAddSubmit() {
+    var data = {json: assembleData()};
+    jQuery.post({
+        url: `${API_BASE_URL}/newEntry`,
+        data: data
+    })
+    .done(function(data) {
+        if(data.error) {
+            alert(data.error);
+        } else {
+            alert("Success!");
+        }
+    })
+    .fail(function(data) {
+        console.log("error");
+    });
+}
+
+function handleEditSubmit(editId) {
+    var data = { json: assembleData() };
+    $.ajax({
+        url: `${API_BASE_URL}/entry/${editId}`,
+        method: 'PUT',
+        data: data
+    })
+    .done(function(result) {
+        if (result.error) {
+            alert(result.error);
+        } else {
+            $('#editSuccessMsg').show();
+        }
+    })
+    .fail(function() {
+        alert('Failed to save changes.');
+    });
+}
+
+function loadEntryForEdit(editId) {
+    $.get(`${API_BASE_URL}/entry/${editId}`)
+    .done(function(response) {
+        var entry = response.data;
+        $('#editMovieTitle').text(entry.movieTitle);
+        $('#editModeHeading').show();
+        $('#movieTitle').val(entry.movieTitle);
+        $('#movieURL').val(entry.movieURL);
+        var parts = entry.viewingDate.split('-');
+        $('#viewingDate').datepicker('setDate', new Date(parts[0], parts[1] - 1, parts[2]));
+        $('#viewFormat').val(entry.viewFormat).trigger('change');
+        $('#viewLocation').val(entry.viewLocation);
+        $('#firstViewing').prop('checked', entry.firstViewing === 1 || entry.firstViewing === true);
+        $('#movieGenre').val(entry.movieGenre);
+        $('#movieReview').val(entry.movieReview);
+        checkFormCompleted();
+    })
+    .fail(function() {
+        alert('Failed to load entry for editing.');
+    });
+}
 
 $(document).ready(function() {
     // Clean up stale API key from localStorage (no longer used)
@@ -141,8 +199,8 @@ $(document).ready(function() {
         getMovieDetails(id);
     })
 
-    for(var x = 0; x < viewConfig.length; x += 1) {
-        var item = viewConfig[x];
+    for(var x = 0; x < config.views.length; x += 1) {
+        var item = config.views[x];
 
         $("<option></option")
             .attr("value", item.name)
@@ -156,7 +214,7 @@ $(document).ready(function() {
 
         var dataIndex = $("#viewFormat").children().eq(index).data("viewconfigindex");
 
-        updateViewLocations(viewConfig[dataIndex]);
+        updateViewLocations(config.views[dataIndex]);
     });
 
 	$("#movieForm").change(function() {
@@ -182,77 +240,14 @@ $(document).ready(function() {
         });
 
         // Override submit to PUT instead of POST (auth via Authentik header, no apiKey needed)
-        $('#formSubmit').click(function() {
-            var data = { json: assembleData() };
-            $.ajax({
-                url: `${API_BASE_URL}/entry/${editId}`,
-                method: 'PUT',
-                data: data
-            })
-            .done(function(result) {
-                if (result.error) {
-                    alert(result.error);
-                } else {
-                    $('#editSuccessMsg').show();
-                }
-            })
-            .fail(function() {
-                alert('Failed to save changes.');
-            });
-        });
+        $('#formSubmit').click(function() { handleEditSubmit(editId); });
 
         // Fetch entry data and pre-populate form (GET /api/entry/:id is public)
-        $.get(`${API_BASE_URL}/entry/${editId}`)
-        .done(function(response) {
-            var entry = response.data;
-            // Show edit mode heading with movie title
-            $('#editMovieTitle').text(entry.movieTitle);
-            $('#editModeHeading').show();
-
-            // Pre-populate form fields
-            $('#movieTitle').val(entry.movieTitle);
-            $('#movieURL').val(entry.movieURL);
-
-            // Set date via datepicker — split YYYY-MM-DD to avoid UTC timezone shift
-            var parts = entry.viewingDate.split('-');
-            $('#viewingDate').datepicker('setDate', new Date(parts[0], parts[1] - 1, parts[2]));
-
-            // Set format and trigger change to populate location dropdown
-            $('#viewFormat').val(entry.viewFormat).trigger('change');
-            // Set location after dropdown has been populated
-            $('#viewLocation').val(entry.viewLocation);
-
-            $('#firstViewing').prop('checked', entry.firstViewing === 1 || entry.firstViewing === true);
-            $('#movieGenre').val(entry.movieGenre);
-            $('#movieReview').val(entry.movieReview);
-
-            checkFormCompleted();
-        })
-        .fail(function() {
-            alert('Failed to load entry for editing.');
-        });
+        loadEntryForEdit(editId);
 
     } else {
         // Normal add mode submit handler (auth via Authentik header)
-        $('#formSubmit').click(function() {
-            var data = {json: assembleData()};
-
-            jQuery.post({
-                url: `${API_BASE_URL}/newEntry`,
-                data: data
-            })
-            .done(function(data) {
-                if(data.error) {
-                    alert(data.error);
-                }
-                else {
-                    alert("Success!");
-                }
-            })
-            .fail(function(data) {
-                console.log( "error" );
-            })
-        });
+        $('#formSubmit').click(handleAddSubmit);
     }
 });
 
