@@ -435,12 +435,12 @@ var updateFilterIndicator = function(filters) {
     if (filters.min_release_date) activeFilters.push(`From ${filters.min_release_date}`);
     if (filters.max_release_date) activeFilters.push(`To ${filters.max_release_date}`);
     
-    var button = $('button[data-target="#advancedFilters"]');
+    var button = $('button[data-bs-target="#advancedFilters"]');
     var isExpanded = button.html().includes('▲');
     var baseText = isExpanded ? 'Filters ▲' : 'Filters ▼';
     
     if (activeFilters.length > 0) {
-        button.html(baseText + ' <span class="badge badge-primary ml-1">' + activeFilters.length + '</span>');
+        button.html(baseText + ' <span class="badge bg-primary ms-1">' + activeFilters.length + '</span>');
     } else {
         button.html(baseText);
     }
@@ -509,22 +509,22 @@ $(document).ready(function() {
     
     // Handle collapsible toggle button text
     $('#advancedFilters').on('show.bs.collapse', function () {
-        var button = $('button[data-target="#advancedFilters"]');
+        var button = $('button[data-bs-target="#advancedFilters"]');
         var badge = button.find('.badge');
         var baseText = 'Filters ▲';
         if (badge.length > 0) {
-            button.html(baseText + ' <span class="badge badge-primary ml-1">' + badge.text() + '</span>');
+            button.html(baseText + ' <span class="badge bg-primary ms-1">' + badge.text() + '</span>');
         } else {
             button.html(baseText);
         }
     });
     
     $('#advancedFilters').on('hide.bs.collapse', function () {
-        var button = $('button[data-target="#advancedFilters"]');
+        var button = $('button[data-bs-target="#advancedFilters"]');
         var badge = button.find('.badge');
         var baseText = 'Filters ▼';
         if (badge.length > 0) {
-            button.html(baseText + ' <span class="badge badge-primary ml-1">' + badge.text() + '</span>');
+            button.html(baseText + ' <span class="badge bg-primary ms-1">' + badge.text() + '</span>');
         } else {
             button.html(baseText);
         }
