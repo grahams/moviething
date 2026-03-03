@@ -155,7 +155,7 @@ body.dark-mode textarea::placeholder {
     color: #9aa0a6 !important;
 }
 body.dark-mode label,
-body.dark-mode .custom-control-label {
+body.dark-mode .form-check-label {
     color: #e0e0e0 !important;
 }
 body.dark-mode .dropdown-menu {
@@ -655,12 +655,12 @@ button[data-bs-target="#advancedFilters"] {
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
     
-    #advancedFilters .custom-control-input:checked ~ .custom-control-label::before {
+    #advancedFilters .form-check-input:checked ~ .form-check-label::before {
         background-color: var(--bs-primary, #0d6efd);
         border-color: var(--bs-primary, #0d6efd);
     }
     
-    #advancedFilters .custom-control-label {
+    #advancedFilters .form-check-label {
         color: var(--bs-body-color, #fff);
     }
 }
@@ -688,12 +688,12 @@ button[data-bs-target="#advancedFilters"] {
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
-[data-bs-theme="dark"] #advancedFilters .custom-control-input:checked ~ .custom-control-label::before {
+[data-bs-theme="dark"] #advancedFilters .form-check-input:checked ~ .form-check-label::before {
     background-color: var(--bs-primary, #0d6efd);
     border-color: var(--bs-primary, #0d6efd);
 }
 
-[data-bs-theme="dark"] #advancedFilters .custom-control-label {
+[data-bs-theme="dark"] #advancedFilters .form-check-label {
     color: var(--bs-body-color, #fff);
 }
 
@@ -720,12 +720,12 @@ body.dark-mode #advancedFilters .form-control:focus {
     box-shadow: 0 0 0 0.25rem rgba(49, 130, 206, 0.25);
 }
 
-body.dark-mode #advancedFilters .custom-control-input:checked ~ .custom-control-label::before {
+body.dark-mode #advancedFilters .form-check-input:checked ~ .form-check-label::before {
     background-color: #3182ce;
     border-color: #3182ce;
 }
 
-body.dark-mode #advancedFilters .custom-control-label {
+body.dark-mode #advancedFilters .form-check-label {
     color: #e2e8f0;
 }
 

@@ -187,7 +187,7 @@ $(document).ready(function() {
     $("#lookupId").on("change", function(e) {
 		var id = $("#lookupId").val();
 
-        extractedId = id.match(/([0-9]+)/gm);
+        var extractedId = id.match(/([0-9]+)/gm);
         if(extractedId) {
             id = extractedId[0];
         }
@@ -249,6 +249,73 @@ $(document).ready(function() {
         // Normal add mode submit handler (auth via Authentik header)
         $('#formSubmit').click(handleAddSubmit);
     }
+
+    // Advanced Filters: load saved state and wire up interactions
+    loadAdvancedFilters();
+
+    $('#advancedFilters').on('show.bs.collapse', function () {
+        var button = $('button[data-bs-target="#advancedFilters"]');
+        var badge = button.find('.badge');
+        var baseText = 'Filters ▲';
+        if (badge.length > 0) {
+            button.html(baseText + ' <span class="badge bg-primary ms-1">' + badge.text() + '</span>');
+        } else {
+            button.html(baseText);
+        }
+    });
+
+    $('#advancedFilters').on('hide.bs.collapse', function () {
+        var button = $('button[data-bs-target="#advancedFilters"]');
+        var badge = button.find('.badge');
+        var baseText = 'Filters ▼';
+        if (badge.length > 0) {
+            button.html(baseText + ' <span class="badge bg-primary ms-1">' + badge.text() + '</span>');
+        } else {
+            button.html(baseText);
+        }
+    });
+
+    $('#clearFilters').on('click', function() {
+        $('#excludeVideos').prop('checked', false);
+        $('#minPopularity').val('');
+        $('#maxPopularity').val('');
+        $('#minVoteCount').val('');
+        $('#maxVoteCount').val('');
+        $('#minVoteAverage').val('');
+        $('#maxVoteAverage').val('');
+        $('#minReleaseDate').val('');
+        $('#maxReleaseDate').val('');
+        localStorage.removeItem('advancedFilters');
+        var searchTerm = $("#searchName").val().trim();
+        if (searchTerm) {
+            searchMovie(searchTerm);
+        }
+    });
+
+    var filterFields = [
+        '#excludeVideos',
+        '#minPopularity',
+        '#maxPopularity',
+        '#minVoteCount',
+        '#maxVoteCount',
+        '#minVoteAverage',
+        '#maxVoteAverage',
+        '#minReleaseDate',
+        '#maxReleaseDate'
+    ];
+
+    filterFields.forEach(function(selector) {
+        $(selector).on('change input', function() {
+            saveAdvancedFilters();
+            var searchTerm = $("#searchName").val().trim();
+            if (searchTerm) {
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(function() {
+                    searchMovie(searchTerm);
+                }, 300);
+            }
+        });
+    });
 });
 
 var updateViewLocations = function(viewItem) {
@@ -497,82 +564,3 @@ var loadAdvancedFilters = function() {
     }
 };
 
-// Advanced Filters functionality
-$(document).ready(function() {
-    // Load saved filters on page load
-    loadAdvancedFilters();
-    
-    // Handle collapsible toggle button text
-    $('#advancedFilters').on('show.bs.collapse', function () {
-        var button = $('button[data-bs-target="#advancedFilters"]');
-        var badge = button.find('.badge');
-        var baseText = 'Filters ▲';
-        if (badge.length > 0) {
-            button.html(baseText + ' <span class="badge bg-primary ms-1">' + badge.text() + '</span>');
-        } else {
-            button.html(baseText);
-        }
-    });
-    
-    $('#advancedFilters').on('hide.bs.collapse', function () {
-        var button = $('button[data-bs-target="#advancedFilters"]');
-        var badge = button.find('.badge');
-        var baseText = 'Filters ▼';
-        if (badge.length > 0) {
-            button.html(baseText + ' <span class="badge bg-primary ms-1">' + badge.text() + '</span>');
-        } else {
-            button.html(baseText);
-        }
-    });
-    
-    // Clear all filters functionality
-    $('#clearFilters').on('click', function() {
-        $('#excludeVideos').prop('checked', false);
-        $('#minPopularity').val('');
-        $('#maxPopularity').val('');
-        $('#minVoteCount').val('');
-        $('#maxVoteCount').val('');
-        $('#minVoteAverage').val('');
-        $('#maxVoteAverage').val('');
-        $('#minReleaseDate').val('');
-        $('#maxReleaseDate').val('');
-        
-        // Clear saved filters from localStorage
-        localStorage.removeItem('advancedFilters');
-        
-        // Trigger search after clearing if there's a search term
-        var searchTerm = $("#searchName").val().trim();
-        if (searchTerm) {
-            searchMovie(searchTerm);
-        }
-    });
-    
-    // Auto-search when filter fields change
-    var filterFields = [
-        '#excludeVideos',
-        '#minPopularity', 
-        '#maxPopularity',
-        '#minVoteCount',
-        '#maxVoteCount', 
-        '#minVoteAverage',
-        '#maxVoteAverage',
-        '#minReleaseDate',
-        '#maxReleaseDate'
-    ];
-    
-    filterFields.forEach(function(selector) {
-        $(selector).on('change input', function() {
-            // Save filters to localStorage whenever they change
-            saveAdvancedFilters();
-            
-            var searchTerm = $("#searchName").val().trim();
-            if (searchTerm) {
-                // Small delay to avoid too many requests while typing
-                clearTimeout(window.searchTimeout);
-                window.searchTimeout = setTimeout(function() {
-                    searchMovie(searchTerm);
-                }, 300);
-            }
-        });
-    });
-});
