@@ -51,7 +51,7 @@ router.post('/newEntry', requireAuth, validate(newEntrySchema), async (req, res,
 });
 
 router.put('/entry/:id', requireAuth, validate(updateEntrySchema), async (req, res, next) => {
-  const { movieTitle, viewingDate, viewFormat, viewLocation, movieGenre, movieReview, firstViewing } = req.validatedBody;
+  const { viewingDate, viewFormat, viewLocation, movieGenre, movieReview, firstViewing } = req.validatedBody;
   const parsedDate = parseDate(viewingDate, 'MM/dd/yyyy', new Date()).toISOString().split('T')[0];
 
   try {

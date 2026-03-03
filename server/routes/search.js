@@ -72,13 +72,6 @@ router.post('/getMovieDetails', async (req, res, next) => {
       return res.status(404).json({ error: 'Invalid TMDB ID' });
     }
 
-    const findUrl = `https://api.themoviedb.org/3/movie/${tmdbID}?api_key=${process.env.MOVIETHING_TMDB_API_KEY}&language=en-US`;
-    const findResponse = await fetch(findUrl);
-    const findData = await findResponse.json();
-    if (findData.id != tmdbID) {
-      return res.status(404).json({ error: 'Movie not found' });
-    }
-
     const url = `https://api.themoviedb.org/3/movie/${tmdbID}?api_key=${process.env.MOVIETHING_TMDB_API_KEY}&append_to_response=external_ids`;
     const response = await fetch(url);
     const data = await response.json();

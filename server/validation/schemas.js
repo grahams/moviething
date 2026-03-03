@@ -17,7 +17,6 @@ const newEntrySchema = z.object({
 });
 
 const updateEntrySchema = z.object({
-  movieTitle: z.string().min(1),
   viewingDate: z.string().regex(datePattern, 'viewingDate must be MM/DD/YYYY'),
   viewFormat: z.string().min(1),
   viewLocation: z.string().min(1),
