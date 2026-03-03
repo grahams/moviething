@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ override: true });
 
-const { testConnection } = require('./db');
+const { testConnection, pool } = require('./db');
 const { errorHandler } = require('./middleware/errorHandler');
 const moviesRouter = require('./routes/movies');
 const entriesRouter = require('./routes/entries');
@@ -62,7 +62,6 @@ const createServer = async () => {
     const gracefulShutdown = (signal) => {
       console.log(`\n${signal} received. Shutting down gracefully...`);
       server.close(() => {
-        const { pool } = require('./db');
         console.log('HTTP server closed.');
         pool.end(() => {
           console.log('Database pool closed.');

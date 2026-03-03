@@ -436,7 +436,6 @@ describe('Movie API Endpoints', () => {
 
   describe('PUT /api/entry/:id', () => {
     const validBody = {
-      movieTitle: 'Test Movie',
       viewingDate: '01/15/2024',
       viewFormat: 'Digital',
       viewLocation: 'Home',
