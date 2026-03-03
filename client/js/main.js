@@ -559,8 +559,8 @@ function applyDateRangeFilter() {
 var countMonth = function(data, month) {
     var monthCount = 0;
 
-    data.forEach(function(row){ 
-        if(moment(row.viewingDate).month() === month) {
+    data.forEach(function(row) {
+        if (row.viewingDate && new Date(row.viewingDate + 'T00:00:00').getMonth() === month) {
             monthCount += 1;
         }
     });
@@ -838,12 +838,13 @@ var prepareFirstViewingData = function(data) {
 };
 
 var prepareMonthData = function(data) {
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var monthCategories = [];
 
     for(var x = 0; x < 12; x += 1) {
         monthChart.series[0].addPoint(countMonth(data,x));
 
-        monthCategories.push(moment().month(x).format("MMM"));
+        monthCategories.push(monthNames[x]);
     }
 
     monthChart.axes[0].setCategories(monthCategories);
