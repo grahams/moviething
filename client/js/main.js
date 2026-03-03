@@ -1,13 +1,17 @@
-var theatreChart = null;
-var formatChart = null;
-var firstChart = null;
-var genreChart = null;
-var monthChart = null;
+var charts = {
+    theatre: null,
+    format: null,
+    firstViewing: null,
+    genre: null,
+    month: null
+};
 
-var allMovieData = [];
-var allDataLoaded = false; // Track if all data is loaded
-var backgroundLoading = false; // Track if background loading is in progress
-var initialYear = null;
+var state = {
+    allMovieData: [],
+    allDataLoaded: false,
+    backgroundLoading: false,
+    initialYear: null
+};
 
 // Helper to get query parameter from URL
 function getQueryParam(name) {
@@ -275,14 +279,14 @@ $(document).ready(function() {
     var now = new Date();
     var urlYear = parseInt(getQueryParam('initialYear'), 10);
     if (!isNaN(urlYear) && urlYear > 1900 && urlYear < 3000) {
-        initialYear = urlYear;
+        state.initialYear = urlYear;
     }
-    if(!initialYear) {
-        initialYear = now.getFullYear();
+    if(!state.initialYear) {
+        state.initialYear = now.getFullYear();
     }
 
-    var startOfYear = new Date(initialYear, 0, 1).toISOString().slice(0, 10);
-    var endOfYear = new Date(initialYear, 11, 31).toISOString().slice(0, 10);
+    var startOfYear = new Date(state.initialYear, 0, 1).toISOString().slice(0, 10);
+    var endOfYear = new Date(state.initialYear, 11, 31).toISOString().slice(0, 10);
     $("#startDate").val(startOfYear);
     $("#endDate").val(endOfYear);
 
@@ -291,7 +295,7 @@ $(document).ready(function() {
     fetchDataForDateRange(startOfYear, endOfYear, true); // true = initial load
 
     $("#theatreControlButton").on("click", function(event) {
-        var data  = theatreChart.series[0].data;
+        var data  = charts.theatre.series[0].data;
         if(data.length) {
             for(var x = 0; x < data.length; x += 1) {
                 if(data[x].name === "Home") {
@@ -307,7 +311,7 @@ $(document).ready(function() {
     $("#applyDateFilter").on("click", function() {
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
-        if (allDataLoaded) {
+        if (state.allDataLoaded) {
             applyDateRangeFilter();
         } else {
             fetchDataForDateRange(startDate, endDate, false);
@@ -319,7 +323,7 @@ $(document).ready(function() {
         e.preventDefault();
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
-        if (allDataLoaded) {
+        if (state.allDataLoaded) {
             applyDateRangeFilter();
         } else {
             fetchDataForDateRange(startDate, endDate, false);
@@ -332,7 +336,7 @@ $(document).ready(function() {
             e.preventDefault();
             var startDate = $("#startDate").val();
             var endDate = $("#endDate").val();
-            if (allDataLoaded) {
+            if (state.allDataLoaded) {
                 applyDateRangeFilter();
             } else {
                 fetchDataForDateRange(startDate, endDate, false);
@@ -459,12 +463,13 @@ $(document).ready(function() {
 // Fetches data for a date range. If initialLoad is true, triggers background fetch for all data.
 function fetchDataForDateRange(startDate, endDate, initialLoad) {
     // If all data is loaded, just filter client-side
-    if (allDataLoaded) {
+    if (state.allDataLoaded) {
         applyDateRangeFilter();
         return;
     }
     var url = API_BASE_URL + "/api/?startDate=" + encodeURIComponent(startDate) + "&endDate=" + encodeURIComponent(endDate);
-    jQuery.getJSON(url, function(data) {
+    jQuery.getJSON(url, function(response) {
+        var data = response.data;
         data.sort(function(rowA, rowB) {
             var timeA = new Date(rowA.viewingDate).getTime();
             var timeB = new Date(rowB.viewingDate).getTime();
@@ -472,26 +477,26 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
             if (timeA > timeB) return 1;
             return 0;
         });
-        allMovieData = data;
+        state.allMovieData = data;
         applyDateRangeFilter();
         // If this is the initial load, start background fetch for all data
         if (initialLoad) {
             fetchAllDataInBackground(startDate);
         }
     }).fail(function() {
-        allMovieData = [];
+        state.allMovieData = [];
         applyDateRangeFilter();
     });
 }
 
 // Background fetch for all data from 2003-01-01 to the day before the current year
 function fetchAllDataInBackground(currentYearStart) {
-    if (backgroundLoading || allDataLoaded) return;
-    backgroundLoading = true;
+    if (state.backgroundLoading || state.allDataLoaded) return;
+    state.backgroundLoading = true;
     var url = API_BASE_URL + "/api/?startDate=2003-01-01&endDate=" + encodeURIComponent(new Date(new Date(currentYearStart).getTime() - 86400000).toISOString().slice(0, 10));
-    jQuery.getJSON(url, function(data) {
+    jQuery.getJSON(url, function(response) {
         // Merge and deduplicate data
-        var merged = allMovieData.concat(data);
+        var merged = state.allMovieData.concat(response.data);
         // Deduplicate by a unique key (movieTitle + viewingDate + viewLocation)
         var seen = {};
         var deduped = [];
@@ -509,12 +514,12 @@ function fetchAllDataInBackground(currentYearStart) {
             if (timeA > timeB) return 1;
             return 0;
         });
-        allMovieData = deduped;
-        allDataLoaded = true;
-        backgroundLoading = false;
+        state.allMovieData = deduped;
+        state.allDataLoaded = true;
+        state.backgroundLoading = false;
         applyDateRangeFilter();
     }).fail(function() {
-        backgroundLoading = false;
+        state.backgroundLoading = false;
         // Optionally, could retry or show a message
     });
 }
@@ -531,7 +536,7 @@ function applyDateRangeFilter() {
     var endDate = $("#endDate").val();
     var titleSearch = $("#titleSearch").val().toLowerCase().trim();
     
-    var filtered = allMovieData.filter(function(row) {
+    var filtered = state.allMovieData.filter(function(row) {
         var d = row.viewingDate ? row.viewingDate.slice(0, 10) : null;
         var dateMatch = d && d >= startDate && d <= endDate;
         var titleMatch = !titleSearch || (row.movieTitle && row.movieTitle.toLowerCase().includes(titleSearch));
@@ -539,11 +544,11 @@ function applyDateRangeFilter() {
     });
     
     // Clear previous chart/list data
-    if (formatChart) { formatChart.series[0].setData([]); formatChart.axes[0].setCategories([]); }
-    if (theatreChart) { theatreChart.series[0].setData([]); theatreChart.axes[0].setCategories([]); }
-    if (firstChart) { firstChart.series[0].setData([]); }
-    if (genreChart) { genreChart.series[0].setData([]); genreChart.axes[0].setCategories([]); }
-    if (monthChart) { monthChart.series[0].setData([]); monthChart.axes[0].setCategories([]); }
+    if (charts.format) { charts.format.series[0].setData([]); charts.format.axes[0].setCategories([]); }
+    if (charts.theatre) { charts.theatre.series[0].setData([]); charts.theatre.axes[0].setCategories([]); }
+    if (charts.firstViewing) { charts.firstViewing.series[0].setData([]); }
+    if (charts.genre) { charts.genre.series[0].setData([]); charts.genre.axes[0].setCategories([]); }
+    if (charts.month) { charts.month.series[0].setData([]); charts.month.axes[0].setCategories([]); }
     $("#movieList tbody").empty();
     // Update all UI with filtered data
     if($("#textStats").length > 0) { prepareTextData(filtered); }
@@ -558,8 +563,8 @@ function applyDateRangeFilter() {
 var countMonth = function(data, month) {
     var monthCount = 0;
 
-    data.forEach(function(row){ 
-        if(moment(row.viewingDate).month() === month) {
+    data.forEach(function(row) {
+        if (row.viewingDate && new Date(row.viewingDate + 'T00:00:00').getMonth() === month) {
             monthCount += 1;
         }
     });
@@ -634,33 +639,33 @@ var createPieChart = function(container, title, seriesName) {
 
 var createFirstViewingChart = function() {
     if($("#firstViewingContainer").length > 0) {
-        firstChart = createPieChart("firstViewingContainer", "First Viewing", "Viewings");
+        charts.firstViewing = createPieChart("firstViewingContainer", "First Viewing", "Viewings");
     }
 };
 
 var createTheatreChart = function() {
     if($("#theatreContainer").length > 0) {
-        theatreChart = 
+        charts.theatre = 
             createPieChart("theatreContainer", "Theatre Frequency", "Visits");
     }
 };
 
 var createFormatChart = function() {
     if($("#formatContainer").length > 0) {
-        formatChart = 
+        charts.format = 
             createPieChart("formatContainer", "Format", "Viewings");
     }
 };
 
 var createGenreChart = function() {
     if($("#genreContainer").length > 0) {
-        genreChart = createPieChart("genreContainer", "Genres", "Viewings");
+        charts.genre = createPieChart("genreContainer", "Genres", "Viewings");
     }
 };
 
 var createMonthChart = function () {
     if($("#monthContainer").length > 0) {
-        monthChart = new Highcharts.Chart({
+        charts.month = new Highcharts.Chart({
             chart: {
                 renderTo: "monthContainer",
                 type: 'bar',
@@ -801,15 +806,15 @@ var countByWithOther = function(data, key, chart, mergeRules) {
 
 var prepareTheatreData = function(data) {
     // Folds several 'locations' into 'Home'
-    countByWithOther(data, "viewLocation", theatreChart, mergeRulesConfig.theatre);
+    countByWithOther(data, "viewLocation", charts.theatre, mergeRulesConfig.theatre);
 };
 
 var prepareFormatData = function(data) {
-    countByWithOther(data, "viewFormat", formatChart, mergeRulesConfig.format);
+    countByWithOther(data, "viewFormat", charts.format, mergeRulesConfig.format);
 };
 
 var prepareGenreData = function(data) {
-    countByWithOther(data, "movieGenre", genreChart, null);
+    countByWithOther(data, "movieGenre", charts.genre, null);
 };
 
 var prepareFirstViewingData = function(data) {
@@ -826,26 +831,27 @@ var prepareFirstViewingData = function(data) {
         }
     });
 
-    firstChart.series[0].addPoint({
+    charts.firstViewing.series[0].addPoint({
         name: "First Viewing",
         y: +firstViewing
     }, true);
-    firstChart.series[0].addPoint({
+    charts.firstViewing.series[0].addPoint({
         name: "Repeat Viewing",
         y: +repeatViewing
     }, true);
 };
 
 var prepareMonthData = function(data) {
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var monthCategories = [];
 
     for(var x = 0; x < 12; x += 1) {
-        monthChart.series[0].addPoint(countMonth(data,x));
+        charts.month.series[0].addPoint(countMonth(data,x));
 
-        monthCategories.push(moment().month(x).format("MMM"));
+        monthCategories.push(monthNames[x]);
     }
 
-    monthChart.axes[0].setCategories(monthCategories);
+    charts.month.axes[0].setCategories(monthCategories);
 };
 
 var prepareListData = function(data) {
