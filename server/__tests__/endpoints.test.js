@@ -40,9 +40,9 @@ describe('Movie API Endpoints', () => {
         .get('/api/')
         .expect(200);  // Using supertest's expect
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].movieTitle).toBe('Test Movie');
-      expect(response.body[0].id).toBe(1);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].movieTitle).toBe('Test Movie');
+      expect(response.body.data[0].id).toBe(1);
       expect(mockConnection.query).toHaveBeenCalled();
     });
 
@@ -419,10 +419,10 @@ describe('Movie API Endpoints', () => {
         .get('/api/entry/42')
         .expect(200);
 
-      expect(response.body.id).toBe(42);
-      expect(response.body.movieTitle).toBe('Test Movie');
-      expect(response.body.viewingDate).toBe('2024-06-15');
-      expect(response.body.firstViewing).toBe(1);
+      expect(response.body.data.id).toBe(42);
+      expect(response.body.data.movieTitle).toBe('Test Movie');
+      expect(response.body.data.viewingDate).toBe('2024-06-15');
+      expect(response.body.data.firstViewing).toBe(1);
     });
 
     it('should return 404 when entry does not exist', async () => {
@@ -436,7 +436,6 @@ describe('Movie API Endpoints', () => {
 
   describe('PUT /api/entry/:id', () => {
     const validBody = {
-      movieTitle: 'Test Movie',
       viewingDate: '01/15/2024',
       viewFormat: 'Digital',
       viewLocation: 'Home',
@@ -457,7 +456,7 @@ describe('Movie API Endpoints', () => {
         .send({ json: JSON.stringify(validBody) })
         .expect(200);
 
-      expect(response.body).toEqual({ OK: 'Updated' });
+      expect(response.body).toEqual({ data: { ok: true } });
     });
 
     it('should update an existing entry with X-Authentik-Username header', async () => {
@@ -471,7 +470,7 @@ describe('Movie API Endpoints', () => {
         .send({ json: JSON.stringify(validBody) })
         .expect(200);
 
-      expect(response.body).toEqual({ OK: 'Updated' });
+      expect(response.body).toEqual({ data: { ok: true } });
     });
 
     it('should return 404 when entry does not exist', async () => {
@@ -486,7 +485,7 @@ describe('Movie API Endpoints', () => {
 
     it('should return 400 when required fields are missing', async () => {
       const bodyMissingTitle = { ...validBody };
-      delete bodyMissingTitle.movieTitle;
+      delete bodyMissingTitle.viewingDate;
 
       await request(app)
         .put('/api/entry/42')

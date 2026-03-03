@@ -1,4 +1,4 @@
-const { getRowsBetweenDates, checkExistingInfo } = require('../index');
+const { getRowsBetweenDates, checkExistingInfo } = require('../db/queries');
 const mariadb = require('mariadb');
 
 describe('Helper Functions', () => {
