@@ -203,7 +203,8 @@ $(document).ready(function() {
 
         // Fetch entry data and pre-populate form (GET /api/entry/:id is public)
         $.get(`${API_BASE_URL}/entry/${editId}`)
-        .done(function(entry) {
+        .done(function(response) {
+            var entry = response.data;
             // Show edit mode heading with movie title
             $('#editMovieTitle').text(entry.movieTitle);
             $('#editModeHeading').show();
@@ -241,11 +242,11 @@ $(document).ready(function() {
                 data: data
             })
             .done(function(data) {
-                if(data.Error) {
-                    alert(data.Error);
+                if(data.error) {
+                    alert(data.error);
                 }
                 else {
-                    alert( "Success!" );
+                    alert("Success!");
                 }
             })
             .fail(function(data) {

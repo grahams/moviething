@@ -464,7 +464,8 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
         return;
     }
     var url = API_BASE_URL + "/api/?startDate=" + encodeURIComponent(startDate) + "&endDate=" + encodeURIComponent(endDate);
-    jQuery.getJSON(url, function(data) {
+    jQuery.getJSON(url, function(response) {
+        var data = response.data;
         data.sort(function(rowA, rowB) {
             var timeA = new Date(rowA.viewingDate).getTime();
             var timeB = new Date(rowB.viewingDate).getTime();
@@ -489,9 +490,9 @@ function fetchAllDataInBackground(currentYearStart) {
     if (backgroundLoading || allDataLoaded) return;
     backgroundLoading = true;
     var url = API_BASE_URL + "/api/?startDate=2003-01-01&endDate=" + encodeURIComponent(new Date(new Date(currentYearStart).getTime() - 86400000).toISOString().slice(0, 10));
-    jQuery.getJSON(url, function(data) {
+    jQuery.getJSON(url, function(response) {
         // Merge and deduplicate data
-        var merged = allMovieData.concat(data);
+        var merged = allMovieData.concat(response.data);
         // Deduplicate by a unique key (movieTitle + viewingDate + viewLocation)
         var seen = {};
         var deduped = [];
