@@ -2,10 +2,10 @@
 
 const express = require('express');
 const { parse: parseDate } = require('date-fns');
-const { query } = require('../db');
+const { pool, query } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { newEntrySchema, updateEntrySchema } = require('../validation/schemas');
+const { newEntrySchema, updateEntrySchema, batchEntrySchema } = require('../validation/schemas');
 const { formatViewingDate } = require('../helpers/dates');
 
 const router = express.Router();
@@ -47,6 +47,33 @@ router.post('/newEntry', requireAuth, validate(newEntrySchema), async (req, res,
     res.json({ data: { ok: true } });
   } catch (err) {
     next(err);
+  }
+});
+
+router.post('/newEntries', requireAuth, validate(batchEntrySchema), async (req, res, next) => {
+  const { entries } = req.validatedBody;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    for (const entry of entries) {
+      const parsedDate = parseDate(entry.viewingDate, 'MM/dd/yyyy', new Date()).toISOString().split('T')[0];
+      await conn.query(
+        'INSERT INTO movies (movieTitle, viewingDate, movieURL, viewFormat, viewLocation, movieGenre, movieReview, firstViewing) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [entry.movieTitle, parsedDate, entry.movieURL, entry.viewFormat, entry.viewLocation, entry.movieGenre, entry.movieReview, entry.firstViewing ? 1 : 0]
+      );
+    }
+
+    await conn.commit();
+    res.json({ data: { ok: true, count: entries.length } });
+  } catch (err) {
+    if (conn) {
+      try { await conn.rollback(); } catch (_) { /* rollback failed — original error preserved */ }
+    }
+    next(err);
+  } finally {
+    if (conn) conn.release();
   }
 });
 
