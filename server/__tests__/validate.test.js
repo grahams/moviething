@@ -1,5 +1,5 @@
 const { validate } = require('../middleware/validate');
-const { newEntrySchema } = require('../validation/schemas');
+const { newEntrySchema, batchEntrySchema } = require('../validation/schemas');
 
 const validBody = {
   movieTitle: 'Test Movie',
@@ -66,5 +66,40 @@ describe('validate middleware', () => {
     middleware({ body: {} }, res, next);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('batchEntrySchema', () => {
+  const validEntry = {
+    movieTitle: 'Test Short',
+    viewingDate: '04/24/2026',
+    movieURL: 'https://iffboston.org/events/test-short/',
+    viewFormat: 'IFFBoston',
+    viewLocation: 'Somerville Theatre',
+    movieGenre: 'Short',
+    movieReview: '',
+    firstViewing: true
+  };
+
+  it('should accept a valid batch of entries', () => {
+    const result = batchEntrySchema.safeParse({ entries: [validEntry, validEntry] });
+    expect(result.success).toBe(true);
+    expect(result.data.entries).toHaveLength(2);
+  });
+
+  it('should reject an empty entries array', () => {
+    const result = batchEntrySchema.safeParse({ entries: [] });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject when entries is missing', () => {
+    const result = batchEntrySchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject when an entry is invalid', () => {
+    const badEntry = { ...validEntry, movieTitle: '' };
+    const result = batchEntrySchema.safeParse({ entries: [validEntry, badEntry] });
+    expect(result.success).toBe(false);
   });
 });

@@ -25,4 +25,8 @@ const updateEntrySchema = z.object({
   firstViewing: z.boolean()
 });
 
-module.exports = { newEntrySchema, updateEntrySchema };
+const batchEntrySchema = z.object({
+  entries: z.array(newEntrySchema).min(1)
+});
+
+module.exports = { newEntrySchema, updateEntrySchema, batchEntrySchema };
