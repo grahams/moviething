@@ -10,6 +10,8 @@ var state = {
     allMovieData: [],
     allDataLoaded: false,
     backgroundLoading: false,
+    backgroundLoadFailed: false,
+    backgroundLoadStart: null,
     initialYear: null
 };
 
@@ -369,6 +371,13 @@ $(document).ready(function() {
         $("#applyDateFilter").click();
     });
 
+    $(document).on("click", "#retryHistoryLoad", function(e) {
+        e.preventDefault();
+        state.backgroundLoadFailed = false;
+        updateSearchUiState();
+        fetchAllDataInBackground(state.backgroundLoadStart);
+    });
+
     // Restore dark mode state from localStorage or system preference
     var darkPref = localStorage.getItem('darkMode');
     if (darkPref === 'true') {
@@ -493,6 +502,7 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
 function fetchAllDataInBackground(currentYearStart) {
     if (state.backgroundLoading || state.allDataLoaded) return;
     state.backgroundLoading = true;
+    state.backgroundLoadStart = currentYearStart;
     var url = API_BASE_URL + "/api/?startDate=2003-01-01&endDate=" + encodeURIComponent(new Date(new Date(currentYearStart).getTime() - 86400000).toISOString().slice(0, 10));
     jQuery.getJSON(url, function(response) {
         // Merge and deduplicate data
@@ -520,11 +530,38 @@ function fetchAllDataInBackground(currentYearStart) {
         applyDateRangeFilter();
     }).fail(function() {
         state.backgroundLoading = false;
-        // Optionally, could retry or show a message
+        state.backgroundLoadFailed = true;
+        updateSearchUiState();
     });
 }
 
+function isSearching() {
+    return $("#titleSearch").val().trim().length > 0;
+}
+
+function updateSearchUiState() {
+    var searching = isSearching();
+
+    $("#startDate, #endDate, #setStart2003, #applyDateFilter")
+        .toggleClass("filter-inactive", searching);
+    $("#dateIgnoredNote").toggle(searching);
+
+    var $status = $("#searchStatus");
+    if (state.backgroundLoadFailed) {
+        $status
+            .html('&#9888; Couldn\'t load full history &mdash; <a href="#" id="retryHistoryLoad">Retry</a>')
+            .show();
+    } else if (searching && !state.allDataLoaded) {
+        $status
+            .text("⏳ Still loading full history — results will update.")
+            .show();
+    } else {
+        $status.hide().empty();
+    }
+}
+
 function applyDateRangeFilter() {
+    updateSearchUiState();
     // Always recreate charts before updating
     createFirstViewingChart();
     createTheatreChart();
