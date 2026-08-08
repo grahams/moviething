@@ -318,6 +318,7 @@ $(document).ready(function() {
 
     // Date filter button handler
     $("#applyDateFilter").on("click", function() {
+        if (isSearching()) { applyDateRangeFilter(); return; }
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
         if (state.allDataLoaded) {
@@ -330,6 +331,7 @@ $(document).ready(function() {
     // Prevent form submission on Enter key and apply filter instead
     $("#dateRangeFilter form").on("submit", function(e) {
         e.preventDefault();
+        if (isSearching()) { applyDateRangeFilter(); return; }
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
         if (state.allDataLoaded) {
@@ -343,6 +345,7 @@ $(document).ready(function() {
     $(".filter-input").on("keypress", function(e) {
         if (e.which === 13) { // Enter key
             e.preventDefault();
+            if (isSearching()) { applyDateRangeFilter(); return; }
             var startDate = $("#startDate").val();
             var endDate = $("#endDate").val();
             if (state.allDataLoaded) {
@@ -485,6 +488,7 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
     }
     var url = API_BASE_URL + "/api/?startDate=" + encodeURIComponent(startDate) + "&endDate=" + encodeURIComponent(endDate);
     jQuery.getJSON(url, function(response) {
+        if (state.allDataLoaded) { applyDateRangeFilter(); return; }
         var data = response.data;
         data.sort(function(rowA, rowB) {
             var timeA = new Date(rowA.viewingDate).getTime();
@@ -500,6 +504,14 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
             fetchAllDataInBackground(startDate);
         }
     }).fail(function() {
+        if (initialLoad) {
+            state.backgroundLoadFailed = true;
+            // Background fetch never started for this failed initial load, so
+            // backgroundLoadStart would otherwise be null. Set it here so a
+            // later Retry (which calls fetchAllDataInBackground(state.backgroundLoadStart))
+            // has a valid boundary date instead of computing one from null.
+            state.backgroundLoadStart = startDate;
+        }
         state.allMovieData = [];
         applyDateRangeFilter();
     });
@@ -583,7 +595,7 @@ function applyDateRangeFilter() {
     $("#toggleCharts").text(showCharts ? "Hide charts" : "Show charts");
     $("#chartsSection").toggle(showCharts);
 
-    // Always recreate charts before updating
+    // Recreate charts before updating, when they're visible
     if (showCharts) {
         createFirstViewingChart();
         createTheatreChart();
