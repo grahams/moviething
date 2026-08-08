@@ -12,7 +12,8 @@ var state = {
     backgroundLoading: false,
     backgroundLoadFailed: false,
     backgroundLoadStart: null,
-    initialYear: null
+    initialYear: null,
+    chartsExpandedDuringSearch: false
 };
 
 // Helper to get query parameter from URL
@@ -296,7 +297,13 @@ $(document).ready(function() {
     var currentYear = now.getFullYear();
     fetchDataForDateRange(startOfYear, endOfYear, true); // true = initial load
 
+    $("#toggleCharts").on("click", function() {
+        state.chartsExpandedDuringSearch = !state.chartsExpandedDuringSearch;
+        applyDateRangeFilter();
+    });
+
     $("#theatreControlButton").on("click", function(event) {
+        if (!charts.theatre) { return; }
         var data  = charts.theatre.series[0].data;
         if(data.length) {
             for(var x = 0; x < data.length; x += 1) {
@@ -539,6 +546,10 @@ function isSearching() {
     return $("#titleSearch").val().trim().length > 0;
 }
 
+function chartsVisible() {
+    return !isSearching() || state.chartsExpandedDuringSearch;
+}
+
 function updateSearchUiState() {
     var searching = isSearching();
 
@@ -561,34 +572,51 @@ function updateSearchUiState() {
 }
 
 function applyDateRangeFilter() {
+    if (!isSearching()) {
+        state.chartsExpandedDuringSearch = false;
+    }
+
     updateSearchUiState();
+
+    var showCharts = chartsVisible();
+    $("#chartsToggleContainer").toggle(isSearching());
+    $("#toggleCharts").text(showCharts ? "Hide charts" : "Show charts");
+    $("#chartsSection").toggle(showCharts);
+
     // Always recreate charts before updating
-    createFirstViewingChart();
-    createTheatreChart();
-    createFormatChart();
-    createGenreChart();
-    createMonthChart();
+    if (showCharts) {
+        createFirstViewingChart();
+        createTheatreChart();
+        createFormatChart();
+        createGenreChart();
+        createMonthChart();
+    }
 
     var filtered = filterMovies(state.allMovieData, {
         startDate: $("#startDate").val(),
         endDate: $("#endDate").val(),
         titleSearch: $("#titleSearch").val()
     });
-    
+
     // Clear previous chart/list data
-    if (charts.format) { charts.format.series[0].setData([]); charts.format.axes[0].setCategories([]); }
-    if (charts.theatre) { charts.theatre.series[0].setData([]); charts.theatre.axes[0].setCategories([]); }
-    if (charts.firstViewing) { charts.firstViewing.series[0].setData([]); }
-    if (charts.genre) { charts.genre.series[0].setData([]); charts.genre.axes[0].setCategories([]); }
-    if (charts.month) { charts.month.series[0].setData([]); charts.month.axes[0].setCategories([]); }
+    if (showCharts) {
+        if (charts.format) { charts.format.series[0].setData([]); charts.format.axes[0].setCategories([]); }
+        if (charts.theatre) { charts.theatre.series[0].setData([]); charts.theatre.axes[0].setCategories([]); }
+        if (charts.firstViewing) { charts.firstViewing.series[0].setData([]); }
+        if (charts.genre) { charts.genre.series[0].setData([]); charts.genre.axes[0].setCategories([]); }
+        if (charts.month) { charts.month.series[0].setData([]); charts.month.axes[0].setCategories([]); }
+    }
     $("#movieList tbody").empty();
+
     // Update all UI with filtered data
     if($("#textStats").length > 0) { prepareTextData(filtered); }
-    if($("#formatContainer").length > 0) { prepareFormatData(filtered); }
-    if($("#theatreContainer").length > 0) { prepareTheatreData(filtered); }
-    if($("#firstViewingContainer").length > 0) { prepareFirstViewingData(filtered); }
-    if($("#genreContainer").length > 0) { prepareGenreData(filtered); }
-    if($("#monthContainer").length > 0) { prepareMonthData(filtered); }
+    if(showCharts) {
+        if($("#formatContainer").length > 0) { prepareFormatData(filtered); }
+        if($("#theatreContainer").length > 0) { prepareTheatreData(filtered); }
+        if($("#firstViewingContainer").length > 0) { prepareFirstViewingData(filtered); }
+        if($("#genreContainer").length > 0) { prepareGenreData(filtered); }
+        if($("#monthContainer").length > 0) { prepareMonthData(filtered); }
+    }
     if($("#movieListDiv").length > 0) { prepareListData(filtered); }
 }
 
