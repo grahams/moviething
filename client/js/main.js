@@ -532,15 +532,10 @@ function applyDateRangeFilter() {
     createGenreChart();
     createMonthChart();
 
-    var startDate = $("#startDate").val();
-    var endDate = $("#endDate").val();
-    var titleSearch = $("#titleSearch").val().toLowerCase().trim();
-    
-    var filtered = state.allMovieData.filter(function(row) {
-        var d = row.viewingDate ? row.viewingDate.slice(0, 10) : null;
-        var dateMatch = d && d >= startDate && d <= endDate;
-        var titleMatch = !titleSearch || (row.movieTitle && row.movieTitle.toLowerCase().includes(titleSearch));
-        return dateMatch && titleMatch;
+    var filtered = filterMovies(state.allMovieData, {
+        startDate: $("#startDate").val(),
+        endDate: $("#endDate").val(),
+        titleSearch: $("#titleSearch").val()
     });
     
     // Clear previous chart/list data
