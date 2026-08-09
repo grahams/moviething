@@ -8,6 +8,14 @@ function getQueryParam(name) {
 }
 
 // config is loaded from config.js (included via script tag before this file)
+// createSearchSession is loaded from searchSession.js
+
+// How long the search box must sit still before we hit TMDB.
+var SEARCH_DEBOUNCE_MS = 300;
+var SEARCH_MIN_LENGTH = 2;
+
+// Assigned on ready; every path that searches goes through it.
+var searchSession = null;
 
 function handleAddSubmit() {
     var data = {json: assembleData()};
@@ -82,18 +90,26 @@ $(document).ready(function() {
         $('body').addClass('dark-mode');
     }
 
-    // Add keyup event for real-time search
-    $("#searchName").on("keyup", function(e) {
-        if ($(this).val().length >= 2) {
-            searchMovie($(this).val().toTitleCase());
-        } else {
-            $("#searchResults").hide().empty();
+    searchSession = createSearchSession({
+        delay: SEARCH_DEBOUNCE_MS,
+        minLength: SEARCH_MIN_LENGTH,
+        search: requestMovieSearch,
+        onResults: renderSearchResults,
+        onCleared: hideSearchResults,
+        onError: function() {
+            console.log("error");
         }
+    });
+
+    // Real-time search. `input` also covers paste and autofill, which keyup misses.
+    $("#searchName").on("input", function(e) {
+        searchSession.input($(this).val().toTitleCase());
     });
 
     // Close dropdown when clicking outside
     $(document).on('click', function(e) {
         if (!$(e.target).closest('#searchName, #searchResults').length) {
+            searchSession.dismiss();
             $("#searchResults").hide();
         }
     });
@@ -205,7 +221,7 @@ $(document).ready(function() {
         localStorage.removeItem('advancedFilters');
         var searchTerm = $("#searchName").val().trim();
         if (searchTerm) {
-            searchMovie(searchTerm);
+            searchSession.input(searchTerm);
         }
     });
 
@@ -226,10 +242,7 @@ $(document).ready(function() {
             saveAdvancedFilters();
             var searchTerm = $("#searchName").val().trim();
             if (searchTerm) {
-                clearTimeout(window.searchTimeout);
-                window.searchTimeout = setTimeout(function() {
-                    searchMovie(searchTerm);
-                }, 300);
+                searchSession.input(searchTerm);
             }
         });
     });
@@ -249,7 +262,9 @@ var updateViewLocations = function(viewItem) {
 };
 
 
-var searchMovie = function(title) {
+// Issues the search and hands back the jqXHR so searchSession can sequence and
+// abort it. Rendering happens in renderSearchResults, only for the newest one.
+var requestMovieSearch = function(title) {
     var j = {
         "title": title,
         "exclude_videos": $("#excludeVideos").is(":checked"),
@@ -270,45 +285,50 @@ var searchMovie = function(title) {
         json: JSON.stringify(j)
     };
 
-    jQuery.post({
+    return jQuery.post({
         url: `${API_BASE_URL}/searchMovie`,
         data: data
-    })
-    .done(function(data) {
-        // // Sort search results by year in descending order
-        // if (data.Search && data.Search.length > 0) {
-        //     data.Search.sort(function(a, b) {
-        //         return parseInt(b.Year) - parseInt(a.Year);
-        //     });
-        // }
+    });
+};
 
-        var $results = $("#searchResults");
-        $results.empty();
-        
-        if (data.Search && data.Search.length > 0) {
-            data.Search.forEach(function(movie) {
-                var $item = $('<a class="dropdown-item" href="#" data-tmdbid="' + movie.tmdbID + '">' + 
-                  movie.Title + ' (' + movie.Year + ')</a>');
-                
-                $item.on('mousedown', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    var tmdbId = $(this).data('tmdbid');
-                    $results.hide();
-                    getMovieDetails(tmdbId);
-                    return false;
-                });
-                
-                $results.append($item);
+var renderSearchResults = function(data) {
+    // // Sort search results by year in descending order
+    // if (data.Search && data.Search.length > 0) {
+    //     data.Search.sort(function(a, b) {
+    //         return parseInt(b.Year) - parseInt(a.Year);
+    //     });
+    // }
+
+    var $results = $("#searchResults");
+    $results.empty();
+
+    if (data.Search && data.Search.length > 0) {
+        data.Search.forEach(function(movie) {
+            var $item = $('<a class="dropdown-item" href="#" data-tmdbid="' + movie.tmdbID + '">' +
+              movie.Title + ' (' + movie.Year + ')</a>');
+
+            $item.on('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var tmdbId = $(this).data('tmdbid');
+                // Drop anything still in flight, or a slow response could pop
+                // the dropdown back open over the details we are about to load.
+                searchSession.dismiss();
+                $results.hide();
+                getMovieDetails(tmdbId);
+                return false;
             });
-            $results.show();
-        } else {
-            $results.hide();
-        }
-    })
-    .fail(function(data) {
-        console.log("error");
-    })
+
+            $results.append($item);
+        });
+        $results.show();
+    } else {
+        $results.hide();
+    }
+};
+
+var hideSearchResults = function() {
+    $("#searchResults").hide().empty();
 };
 
 var getMovieDetails = function(tmdbId) {
@@ -459,7 +479,7 @@ var loadAdvancedFilters = function() {
             // Update filter indicator after loading saved filters
             var searchTerm = $("#searchName").val().trim();
             if (searchTerm) {
-                searchMovie(searchTerm);
+                searchSession.input(searchTerm);
             } else {
                 // Just update the filter indicator without triggering search
                 var filterData = {
