@@ -14,7 +14,7 @@ COPY server/ ./server/
 COPY client/ ./client/
 
 # Install production dependencies only
-RUN npm install
+RUN npm ci --omit=dev
 
 # Copy application code
 #COPY . .
