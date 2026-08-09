@@ -35,6 +35,8 @@
                     </div>
                     <button type="button" id="applyDateFilter" class="btn btn-primary">Apply Filter</button>
                 </form>
+                <div id="dateIgnoredNote" class="filter-note" style="display: none;">Date range ignored while searching</div>
+                <div id="searchStatus" class="filter-note" role="status" aria-live="polite" style="display: none;"></div>
             </div>
 
             <div id="textStats">
@@ -45,14 +47,20 @@
                 </ul>
             </div>
 
-            <div id="formatContainer"></div>
-            <div id="theatreContainer"></div>
-            <div id="theatreControlContainer">
-                <button id="theatreControlButton" class="btn btn-outline-primary">Toggle "Home"</button>
+            <div id="chartsToggleContainer" class="mb-2">
+                <button type="button" id="toggleCharts" class="btn btn-outline-secondary btn-sm">Hide charts</button>
             </div>
-            <div id="firstViewingContainer"></div>
-            <div id="genreContainer"></div>
-            <div id="monthContainer"></div>
+
+            <div id="chartsSection">
+                <div id="formatContainer"></div>
+                <div id="theatreContainer"></div>
+                <div id="theatreControlContainer">
+                    <button id="theatreControlButton" class="btn btn-outline-primary">Toggle "Home"</button>
+                </div>
+                <div id="firstViewingContainer"></div>
+                <div id="genreContainer"></div>
+                <div id="monthContainer"></div>
+            </div>
 
             <div id="movieListDiv">
                 <table id="movieList" class="movie-table">
@@ -83,6 +91,7 @@
 
         <script src="js/plugins.js"></script>
         <script src="js/merge-rules.js"></script>
+        <script src="js/filter.js"></script>
         <script src="js/main.js"></script>
 
         <script>
@@ -109,6 +118,7 @@
                 const showFilterControls = urlParams.get('showFilterControls');
                 if (showFilterControls === 'false') {
                     $('#dateRangeFilter').hide();
+                    $('#chartsToggleContainer').hide();
                 }
                 
                 // Show/hide clear button and clear input on click

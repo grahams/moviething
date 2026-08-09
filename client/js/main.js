@@ -10,7 +10,10 @@ var state = {
     allMovieData: [],
     allDataLoaded: false,
     backgroundLoading: false,
-    initialYear: null
+    backgroundLoadFailed: false,
+    backgroundLoadStart: null,
+    initialYear: null,
+    chartsOverride: null
 };
 
 // Helper to get query parameter from URL
@@ -264,6 +267,7 @@ $(document).ready(function() {
     var hideDarkMode = getQueryParam('hideDarkMode') === 'true';
     if (hideFilters) {
         $('#dateRangeFilter').hide();
+        $('#chartsToggleContainer').hide();
         // Optionally hide the add button and theatre control if you want all controls gone:
         $('.mb-3:has(#setStart2003), .mb-3:has(#applyDateFilter), #theatreControlContainer').hide();
     }
@@ -294,7 +298,13 @@ $(document).ready(function() {
     var currentYear = now.getFullYear();
     fetchDataForDateRange(startOfYear, endOfYear, true); // true = initial load
 
+    $("#toggleCharts").on("click", function() {
+        state.chartsOverride = !chartsVisible();
+        applyDateRangeFilter();
+    });
+
     $("#theatreControlButton").on("click", function(event) {
+        if (!charts.theatre) { return; }
         var data  = charts.theatre.series[0].data;
         if(data.length) {
             for(var x = 0; x < data.length; x += 1) {
@@ -309,6 +319,7 @@ $(document).ready(function() {
 
     // Date filter button handler
     $("#applyDateFilter").on("click", function() {
+        if (isSearching()) { applyDateRangeFilter(); return; }
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
         if (state.allDataLoaded) {
@@ -321,6 +332,7 @@ $(document).ready(function() {
     // Prevent form submission on Enter key and apply filter instead
     $("#dateRangeFilter form").on("submit", function(e) {
         e.preventDefault();
+        if (isSearching()) { applyDateRangeFilter(); return; }
         var startDate = $("#startDate").val();
         var endDate = $("#endDate").val();
         if (state.allDataLoaded) {
@@ -334,6 +346,7 @@ $(document).ready(function() {
     $(".filter-input").on("keypress", function(e) {
         if (e.which === 13) { // Enter key
             e.preventDefault();
+            if (isSearching()) { applyDateRangeFilter(); return; }
             var startDate = $("#startDate").val();
             var endDate = $("#endDate").val();
             if (state.allDataLoaded) {
@@ -367,6 +380,13 @@ $(document).ready(function() {
     $("#setStart2003").on("click", function() {
         $("#startDate").val("2003-01-01");
         $("#applyDateFilter").click();
+    });
+
+    $(document).on("click", "#retryHistoryLoad", function(e) {
+        e.preventDefault();
+        state.backgroundLoadFailed = false;
+        updateSearchUiState();
+        fetchAllDataInBackground(state.backgroundLoadStart);
     });
 
     // Restore dark mode state from localStorage or system preference
@@ -469,6 +489,7 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
     }
     var url = API_BASE_URL + "/api/?startDate=" + encodeURIComponent(startDate) + "&endDate=" + encodeURIComponent(endDate);
     jQuery.getJSON(url, function(response) {
+        if (state.allDataLoaded) { applyDateRangeFilter(); return; }
         var data = response.data;
         data.sort(function(rowA, rowB) {
             var timeA = new Date(rowA.viewingDate).getTime();
@@ -484,6 +505,14 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
             fetchAllDataInBackground(startDate);
         }
     }).fail(function() {
+        if (initialLoad) {
+            state.backgroundLoadFailed = true;
+            // Background fetch never started for this failed initial load, so
+            // backgroundLoadStart would otherwise be null. Set it here so a
+            // later Retry (which calls fetchAllDataInBackground(state.backgroundLoadStart))
+            // has a valid boundary date instead of computing one from null.
+            state.backgroundLoadStart = startDate;
+        }
         state.allMovieData = [];
         applyDateRangeFilter();
     });
@@ -493,6 +522,7 @@ function fetchDataForDateRange(startDate, endDate, initialLoad) {
 function fetchAllDataInBackground(currentYearStart) {
     if (state.backgroundLoading || state.allDataLoaded) return;
     state.backgroundLoading = true;
+    state.backgroundLoadStart = currentYearStart;
     var url = API_BASE_URL + "/api/?startDate=2003-01-01&endDate=" + encodeURIComponent(new Date(new Date(currentYearStart).getTime() - 86400000).toISOString().slice(0, 10));
     jQuery.getJSON(url, function(response) {
         // Merge and deduplicate data
@@ -520,43 +550,87 @@ function fetchAllDataInBackground(currentYearStart) {
         applyDateRangeFilter();
     }).fail(function() {
         state.backgroundLoading = false;
-        // Optionally, could retry or show a message
+        state.backgroundLoadFailed = true;
+        updateSearchUiState();
     });
 }
 
-function applyDateRangeFilter() {
-    // Always recreate charts before updating
-    createFirstViewingChart();
-    createTheatreChart();
-    createFormatChart();
-    createGenreChart();
-    createMonthChart();
+function isSearching() {
+    return $("#titleSearch").val().trim().length > 0;
+}
 
-    var startDate = $("#startDate").val();
-    var endDate = $("#endDate").val();
-    var titleSearch = $("#titleSearch").val().toLowerCase().trim();
-    
-    var filtered = state.allMovieData.filter(function(row) {
-        var d = row.viewingDate ? row.viewingDate.slice(0, 10) : null;
-        var dateMatch = d && d >= startDate && d <= endDate;
-        var titleMatch = !titleSearch || (row.movieTitle && row.movieTitle.toLowerCase().includes(titleSearch));
-        return dateMatch && titleMatch;
+// Charts follow the search by default: hidden while searching, shown
+// otherwise. Once the user works the toggle, their choice owns visibility
+// for the rest of the session.
+function chartsVisible() {
+    if (state.chartsOverride !== null) {
+        return state.chartsOverride;
+    }
+    return !isSearching();
+}
+
+function updateSearchUiState() {
+    var searching = isSearching();
+
+    $("#startDate, #endDate, #setStart2003, #applyDateFilter")
+        .toggleClass("filter-inactive", searching);
+    $("#dateIgnoredNote").toggle(searching);
+
+    var $status = $("#searchStatus");
+    if (state.backgroundLoadFailed) {
+        $status
+            .html('&#9888; Couldn\'t load full history &mdash; <a href="#" id="retryHistoryLoad">Retry</a>')
+            .show();
+    } else if (searching && !state.allDataLoaded) {
+        $status
+            .text("⏳ Still loading full history — results will update.")
+            .show();
+    } else {
+        $status.hide().empty();
+    }
+}
+
+function applyDateRangeFilter() {
+    updateSearchUiState();
+
+    var showCharts = chartsVisible();
+    $("#toggleCharts").text(showCharts ? "Hide charts" : "Show charts");
+    $("#chartsSection").toggle(showCharts);
+
+    // Recreate charts before updating, when they're visible
+    if (showCharts) {
+        createFirstViewingChart();
+        createTheatreChart();
+        createFormatChart();
+        createGenreChart();
+        createMonthChart();
+    }
+
+    var filtered = filterMovies(state.allMovieData, {
+        startDate: $("#startDate").val(),
+        endDate: $("#endDate").val(),
+        titleSearch: $("#titleSearch").val()
     });
-    
+
     // Clear previous chart/list data
-    if (charts.format) { charts.format.series[0].setData([]); charts.format.axes[0].setCategories([]); }
-    if (charts.theatre) { charts.theatre.series[0].setData([]); charts.theatre.axes[0].setCategories([]); }
-    if (charts.firstViewing) { charts.firstViewing.series[0].setData([]); }
-    if (charts.genre) { charts.genre.series[0].setData([]); charts.genre.axes[0].setCategories([]); }
-    if (charts.month) { charts.month.series[0].setData([]); charts.month.axes[0].setCategories([]); }
+    if (showCharts) {
+        if (charts.format) { charts.format.series[0].setData([]); charts.format.axes[0].setCategories([]); }
+        if (charts.theatre) { charts.theatre.series[0].setData([]); charts.theatre.axes[0].setCategories([]); }
+        if (charts.firstViewing) { charts.firstViewing.series[0].setData([]); }
+        if (charts.genre) { charts.genre.series[0].setData([]); charts.genre.axes[0].setCategories([]); }
+        if (charts.month) { charts.month.series[0].setData([]); charts.month.axes[0].setCategories([]); }
+    }
     $("#movieList tbody").empty();
+
     // Update all UI with filtered data
     if($("#textStats").length > 0) { prepareTextData(filtered); }
-    if($("#formatContainer").length > 0) { prepareFormatData(filtered); }
-    if($("#theatreContainer").length > 0) { prepareTheatreData(filtered); }
-    if($("#firstViewingContainer").length > 0) { prepareFirstViewingData(filtered); }
-    if($("#genreContainer").length > 0) { prepareGenreData(filtered); }
-    if($("#monthContainer").length > 0) { prepareMonthData(filtered); }
+    if(showCharts) {
+        if($("#formatContainer").length > 0) { prepareFormatData(filtered); }
+        if($("#theatreContainer").length > 0) { prepareTheatreData(filtered); }
+        if($("#firstViewingContainer").length > 0) { prepareFirstViewingData(filtered); }
+        if($("#genreContainer").length > 0) { prepareGenreData(filtered); }
+        if($("#monthContainer").length > 0) { prepareMonthData(filtered); }
+    }
     if($("#movieListDiv").length > 0) { prepareListData(filtered); }
 }
 

@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "start": "serve -s .",
-    "dev": "serve -l 3001 ."
+    "dev": "serve -l 3001 .",
+    "test": "jest"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "serve": "^14.2.1"
   }
 } 

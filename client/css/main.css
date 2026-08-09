@@ -757,3 +757,18 @@ body.dark-mode .input-group .btn-outline-secondary:hover {
     background-color: #4a5568;
     color: #fff;
 }
+
+/* Muted date controls while a title search overrides them */
+.filter-inactive {
+    opacity: 0.45;
+}
+
+.filter-note {
+    margin-top: 0.35rem;
+    font-size: 0.9em;
+    color: #666;
+}
+
+body.dark-mode .filter-note {
+    color: #aaa;
+}
