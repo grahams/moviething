@@ -13,7 +13,7 @@ var state = {
     backgroundLoadFailed: false,
     backgroundLoadStart: null,
     initialYear: null,
-    chartsExpandedDuringSearch: false
+    chartsOverride: null
 };
 
 // Helper to get query parameter from URL
@@ -267,6 +267,7 @@ $(document).ready(function() {
     var hideDarkMode = getQueryParam('hideDarkMode') === 'true';
     if (hideFilters) {
         $('#dateRangeFilter').hide();
+        $('#chartsToggleContainer').hide();
         // Optionally hide the add button and theatre control if you want all controls gone:
         $('.mb-3:has(#setStart2003), .mb-3:has(#applyDateFilter), #theatreControlContainer').hide();
     }
@@ -298,7 +299,7 @@ $(document).ready(function() {
     fetchDataForDateRange(startOfYear, endOfYear, true); // true = initial load
 
     $("#toggleCharts").on("click", function() {
-        state.chartsExpandedDuringSearch = !state.chartsExpandedDuringSearch;
+        state.chartsOverride = !chartsVisible();
         applyDateRangeFilter();
     });
 
@@ -558,8 +559,14 @@ function isSearching() {
     return $("#titleSearch").val().trim().length > 0;
 }
 
+// Charts follow the search by default: hidden while searching, shown
+// otherwise. Once the user works the toggle, their choice owns visibility
+// for the rest of the session.
 function chartsVisible() {
-    return !isSearching() || state.chartsExpandedDuringSearch;
+    if (state.chartsOverride !== null) {
+        return state.chartsOverride;
+    }
+    return !isSearching();
 }
 
 function updateSearchUiState() {
@@ -584,14 +591,9 @@ function updateSearchUiState() {
 }
 
 function applyDateRangeFilter() {
-    if (!isSearching()) {
-        state.chartsExpandedDuringSearch = false;
-    }
-
     updateSearchUiState();
 
     var showCharts = chartsVisible();
-    $("#chartsToggleContainer").toggle(isSearching());
     $("#toggleCharts").text(showCharts ? "Hide charts" : "Show charts");
     $("#chartsSection").toggle(showCharts);
 

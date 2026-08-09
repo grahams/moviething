@@ -47,8 +47,8 @@
                 </ul>
             </div>
 
-            <div id="chartsToggleContainer" class="mb-2" style="display: none;">
-                <button type="button" id="toggleCharts" class="btn btn-outline-secondary btn-sm">Show charts</button>
+            <div id="chartsToggleContainer" class="mb-2">
+                <button type="button" id="toggleCharts" class="btn btn-outline-secondary btn-sm">Hide charts</button>
             </div>
 
             <div id="chartsSection">
@@ -118,6 +118,7 @@
                 const showFilterControls = urlParams.get('showFilterControls');
                 if (showFilterControls === 'false') {
                     $('#dateRangeFilter').hide();
+                    $('#chartsToggleContainer').hide();
                 }
                 
                 // Show/hide clear button and clear input on click
