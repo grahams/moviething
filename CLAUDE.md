@@ -64,4 +64,11 @@ Jest + Supertest with mocked MariaDB connections. Tests live in `server/__tests_
 
 ### Environment variables
 
-See `.env.example`. Required: `SERVER_PORT`, `MOVIETHING_SQL_*` (host/user/pass/db), `MOVIETHING_TMDB_API_KEY`, `MOVIETHING_VALID_API_KEY`, and optional RSS title/description vars.
+See `.env.example`. `server/index.js` validates the required vars at startup and calls `process.exit(1)` on the first one missing. The check is skipped when `NODE_ENV=test`.
+
+**Required** — the server will not start without all of these:
+`MOVIETHING_SQL_HOST`, `MOVIETHING_SQL_USER`, `MOVIETHING_SQL_PASS`, `MOVIETHING_SQL_DB`, `MOVIETHING_TMDB_API_KEY`, `MOVIETHING_VALID_API_KEY`, `MOVIETHING_RSS_TITLE`, `MOVIETHING_RSS_DESCRIPTION`.
+
+**Optional** — these have fallbacks:
+- `SERVER_PORT` — defaults to `3000`.
+- `MOVIETHING_BASE_URL` — defaults to `http://localhost:3000`. Used for the RSS feed's `feed_url` and `site_url`, so a deployed instance should set it or the feed will advertise localhost URLs.
