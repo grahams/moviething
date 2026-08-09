@@ -1,4 +1,4 @@
-FROM node:23-bullseye-slim 
+FROM node:24-bookworm-slim
 
 # Install MariaDB client libraries and curl for health checks
 RUN apt-get update && apt-get install -y \
