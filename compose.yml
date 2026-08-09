@@ -8,11 +8,13 @@ services:
     env_file: .env
     environment:
       - NODE_ENV=production
-      - MOVIETHING_SQL_HOST=${MOVIETHING_SQL_HOST:-mariadb}
+      # Always the compose service name. Not interpolated from .env, which
+      # holds the host used when running the server natively (localhost).
+      - MOVIETHING_SQL_HOST=mariadb
       - MOVIETHING_SQL_USER=${MOVIETHING_SQL_USER:-root}
       - MOVIETHING_SQL_PASS=${MOVIETHING_SQL_PASS:-password}
       - MOVIETHING_SQL_DB=${MOVIETHING_SQL_DB:-movies}
-      - MOVIETHING_OMDB_API_KEY=${MOVIETHING_OMDB_API_KEY}
+      - MOVIETHING_TMDB_API_KEY=${MOVIETHING_TMDB_API_KEY}
       - MOVIETHING_VALID_API_KEY=${MOVIETHING_VALID_API_KEY}
       - MOVIETHING_RSS_TITLE=${MOVIETHING_RSS_TITLE:-"My Movie Collection"}
       - MOVIETHING_RSS_DESCRIPTION=${MOVIETHING_RSS_DESCRIPTION:-"A collection of movies I've watched"}
