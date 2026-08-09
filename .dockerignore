@@ -1,0 +1,37 @@
+# Dependencies are installed fresh inside the image by `npm ci`. Copying host
+# node_modules in would also drag host-built native bindings (mariadb) along.
+node_modules
+**/node_modules
+
+# VCS, worktrees and CI config
+.git
+.gitignore
+.github
+.worktrees
+
+# Local secrets. Nothing currently COPYs these, but the commented-out
+# `COPY . .` in the Dockerfile is one uncomment away from leaking them.
+.env
+.env.*
+!.env.example
+
+# Local database data volume
+mariadb
+
+# Tests and coverage output
+coverage
+**/__tests__
+**/*.test.js
+jest.config.js
+
+# Container and infra files that are not build inputs
+Dockerfile
+.dockerignore
+compose.yml
+
+# Docs and editor cruft
+docs
+*.md
+.vscode
+.idea
+.DS_Store
