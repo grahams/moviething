@@ -899,15 +899,14 @@ async function runOnce({ client, db, limit, pauseThreshold }) {
       continue;
     }
 
+    let uri;
     try {
-      const { uri } = await client.logEntry({
+      ({ uri } = await client.logEntry({
         imdbId,
         watchedDate: formatViewingDate(row.viewingDate),
         rewatch: row.firstViewing !== 1,
         review: row.movieReview || ''
-      });
-      await db.markSynced(row.id, uri);
-      pushed++;
+      }));
     } catch (err) {
       // Abandon the run entirely. Every remaining row would fail identically,
       // and burning their attempt counts would mass-fail the backlog over a
@@ -915,21 +914,42 @@ async function runOnce({ client, db, limit, pauseThreshold }) {
       if (err instanceof AuthError) {
         return { pushed, failed, skipped, paused: false, authFailed: true, pending };
       }
-
-      if (err instanceof PermanentError) {
-        await db.markFailed(row.id, err.message);
-        failed++;
-        continue;
+      try {
+        // PermanentError, or a transient one that has run out of attempts.
+        if (err instanceof PermanentError || row.letterboxdAttempts + 1 >= MAX_ATTEMPTS) {
+          await db.markFailed(row.id, err.message);
+          failed++;
+        } else {
+          await db.recordAttempt(row.id, err.message);
+        }
+      } catch (dbErr) {
+        // One row's bookkeeping failure must not abandon the rest of the batch.
+        // The row stays pending and is retried next run.
+        console.error(`letterboxd: could not record outcome for row ${row.id}: ${dbErr.message}`);
       }
+      continue;
+    }
 
-      // TransientError, plus anything unexpected: a bug in the client should
-      // not take down the worker, so treat unknown errors as retryable.
-      if (row.letterboxdAttempts + 1 >= MAX_ATTEMPTS) {
-        await db.markFailed(row.id, err.message);
-        failed++;
-      } else {
-        await db.recordAttempt(row.id, err.message);
+    // The entry now EXISTS on Letterboxd. Whatever happens below, this row must
+    // never be pushed again: a second push puts a duplicate in a public diary,
+    // and Letterboxd cannot tell a duplicate from a genuine rewatch. This is why
+    // the network call and the bookkeeping write are separate try blocks.
+    try {
+      await db.markSynced(row.id, uri);
+      pushed++;
+    } catch (err) {
+      console.error(`letterboxd: posted row ${row.id} to ${uri} but could not record it: ${err.message}`);
+      // 'skipped', not 'failed': POST /api/letterboxd/retry re-queues failed rows,
+      // which would duplicate this entry. Skipped rows are never pushed again by
+      // any path. The uri is preserved so the row can be reconciled by hand.
+      try {
+        await db.markSkipped(row.id, `posted to letterboxd (${uri}) but recording failed: ${err.message}`);
+      } catch (dbErr) {
+        console.error(`letterboxd: could not mark row ${row.id} skipped: ${dbErr.message}`);
       }
+      // Counted as failed even though the row is 'skipped': the row status
+      // protects against duplicates, this counter reports the run had a problem.
+      failed++;
     }
   }
 
