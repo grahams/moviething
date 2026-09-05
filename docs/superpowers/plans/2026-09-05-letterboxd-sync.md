@@ -1132,7 +1132,9 @@ function createWorker({ config, db, client, runOnce }) {
   };
 
   async function execute({ confirm = false } = {}) {
-    if (running) return null;
+    // Discriminated outcome: the caller must be able to tell "busy" from
+    // "errored", or an HTTP route reports a database failure as "try again".
+    if (running) return { ok: false, reason: 'busy' };
     running = true;
     try {
       const result = await runOnce({
@@ -1147,10 +1149,10 @@ function createWorker({ config, db, client, runOnce }) {
       state.authOk = !result.authFailed;
       state.lastError = null;
       if (result.authFailed) stop();
-      return result;
+      return { ok: true, result };
     } catch (err) {
       state.lastError = err.message;
-      return null;
+      return { ok: false, reason: 'error', error: err.message };
     } finally {
       state.lastRun = new Date().toISOString();
       running = false;
@@ -1172,9 +1174,9 @@ function createWorker({ config, db, client, runOnce }) {
   // A manual run always executes, even after start() halted on an auth
   // failure — that is how a freshly pasted cookie gets tried.
   async function runNow(options = {}) {
-    const result = await execute(options);
-    if (result && !result.authFailed && !timer && config.enabled) start();
-    return result;
+    const outcome = await execute(options);
+    if (outcome.ok && !outcome.result.authFailed && !timer && config.enabled) start();
+    return outcome;
   }
 
   function getState() {
@@ -1560,22 +1562,35 @@ describe('letterboxd routes', () => {
 
   describe('POST /api/letterboxd/sync', () => {
     it('triggers a run and returns the result', async () => {
-      mockWorker.runNow.mockResolvedValue({ pushed: 2, failed: 0, skipped: 0, paused: false });
+      mockWorker.runNow.mockResolvedValue({ ok: true, result: { pushed: 2, failed: 0, skipped: 0, paused: false } });
       const res = await request(app).post('/api/letterboxd/sync').set(...AUTH).expect(200);
       expect(mockWorker.runNow).toHaveBeenCalledWith({ confirm: false });
       expect(res.body.data.pushed).toBe(2);
     });
 
     it('passes confirm=true through from the query string', async () => {
-      mockWorker.runNow.mockResolvedValue({ pushed: 200, failed: 0, skipped: 0, paused: false });
+      mockWorker.runNow.mockResolvedValue({ ok: true, result: { pushed: 200, failed: 0, skipped: 0, paused: false } });
       await request(app).post('/api/letterboxd/sync?confirm=true').set(...AUTH).expect(200);
       expect(mockWorker.runNow).toHaveBeenCalledWith({ confirm: true });
     });
 
     it('reports 409 when the run paused on the threshold', async () => {
-      mockWorker.runNow.mockResolvedValue({ pushed: 0, failed: 0, skipped: 0, paused: true, pending: 200 });
+      mockWorker.runNow.mockResolvedValue({ ok: true, result: { pushed: 0, failed: 0, skipped: 0, paused: true, pending: 200 } });
       const res = await request(app).post('/api/letterboxd/sync').set(...AUTH).expect(409);
       expect(res.body.error).toMatch(/confirm=true/);
+    });
+
+    it('returns 409 when a run is already in progress', async () => {
+      mockWorker.runNow.mockResolvedValue({ ok: false, reason: 'busy' });
+      const res = await request(app).post('/api/letterboxd/sync').set(...AUTH).expect(409);
+      expect(res.body.error).toMatch(/already in progress/);
+    });
+
+    it('returns 500, not 409, when the run itself errored', async () => {
+      // A database failure must not be reported to the user as "try again".
+      mockWorker.runNow.mockResolvedValue({ ok: false, reason: 'error', error: 'db down' });
+      const res = await request(app).post('/api/letterboxd/sync').set(...AUTH).expect(500);
+      expect(res.body.error).toMatch(/db down/);
     });
 
     it('requires auth', async () => {
@@ -1656,15 +1671,25 @@ router.get('/letterboxd/status', requireAuth, async (req, res, next) => {
 router.post('/letterboxd/sync', requireAuth, async (req, res, next) => {
   try {
     const confirm = req.query.confirm === 'true';
-    const result = await worker.runNow({ confirm });
+    const outcome = await worker.runNow({ confirm });
 
-    if (result && result.paused) {
+    // 'busy' is a real 409 (retry later); 'error' is a 500. Collapsing both to
+    // one message would tell a user with a broken database to just try again.
+    if (!outcome.ok) {
+      if (outcome.reason === 'busy') {
+        return res.status(409).json({ error: 'A sync run is already in progress.' });
+      }
+      return res.status(500).json({ error: outcome.error });
+    }
+
+    const result = outcome.result;
+    if (result.paused) {
       return res.status(409).json({
         error: `${result.pending} entries pending, above the pause threshold. ` +
                'Re-send with ?confirm=true to push them all.'
       });
     }
-    res.json({ data: result || { ok: false, reason: 'a run was already in progress' } });
+    res.json({ data: result });
   } catch (err) {
     next(err);
   }
@@ -1716,7 +1741,7 @@ And stop it in `gracefulShutdown`, as the first statement inside the handler:
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx jest server/__tests__/letterboxd-routes.test.js`
-Expected: PASS, 8 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 7: Run the whole suite — nothing existing may regress**
 
