@@ -12,6 +12,7 @@ const entriesRouter = require('./routes/entries');
 const searchRouter = require('./routes/search');
 const exportsRouter = require('./routes/exports');
 const healthRouter = require('./routes/health');
+const letterboxdRouter = require('./routes/letterboxd');
 
 const app = express();
 
@@ -40,6 +41,7 @@ apiRouter.use('/', entriesRouter);
 apiRouter.use('/', searchRouter);
 apiRouter.use('/', exportsRouter);
 apiRouter.use('/', healthRouter);
+apiRouter.use('/', letterboxdRouter);
 
 app.use('/api', apiRouter);
 app.use(express.static(path.join(__dirname, '..', 'client')));
@@ -59,7 +61,14 @@ const createServer = async () => {
       }
     });
 
+    const { config: lbxConfig, worker: lbxWorker } = require('./letterboxd');
+    if (lbxConfig.enabled && process.env.NODE_ENV !== 'test') {
+      lbxWorker.start();
+      console.log(`✅ Letterboxd sync enabled (every ${lbxConfig.intervalSeconds}s)`);
+    }
+
     const gracefulShutdown = (signal) => {
+      lbxWorker.stop();
       console.log(`\n${signal} received. Shutting down gracefully...`);
       server.close(() => {
         console.log('HTTP server closed.');
