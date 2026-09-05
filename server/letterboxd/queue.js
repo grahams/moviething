@@ -1,6 +1,6 @@
 'use strict';
 
-const { AuthError, PermanentError } = require('./errors');
+const { AuthError, PermanentError, AmbiguousError } = require('./errors');
 const { formatViewingDate } = require('../helpers/dates');
 
 const MAX_ATTEMPTS = 5;
@@ -54,6 +54,18 @@ async function runOnce({ client, db, limit, pauseThreshold }) {
     } catch (err) {
       if (err instanceof AuthError) {
         return { pushed, failed, skipped, paused: false, authFailed: true, pending };
+      }
+      if (err instanceof AmbiguousError) {
+        console.error(`letterboxd: row ${row.id} may or may not have posted: ${err.message}`);
+        // 'skipped', not 'failed': /retry re-queues failed rows, and a retry here
+        // risks a duplicate in a public diary. Needs a human to check the diary.
+        try {
+          await db.markSkipped(row.id, `outcome unknown, check diary manually: ${err.message}`);
+        } catch (dbErr) {
+          console.error(`letterboxd: could not mark row ${row.id} skipped: ${dbErr.message}`);
+        }
+        failed++;
+        continue;
       }
       try {
         if (err instanceof PermanentError || row.letterboxdAttempts + 1 >= MAX_ATTEMPTS) {

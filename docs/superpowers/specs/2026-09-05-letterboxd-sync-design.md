@@ -255,6 +255,21 @@ is buildable and fully testable before the spike lands. Only the internals of
 - **Duplicate diary entries.** Mitigated by no-backfill (§1) and the pause
   threshold (§6). Letterboxd cannot detect duplicates, so this failure mode is
   prevented rather than corrected.
+- **A crash between the diary POST and the database write still leaves the
+  row `pending`.** A dropped connection while reading the response is caught
+  as `AmbiguousError` and the row is marked `skipped` for manual reconciliation
+  (see client.js/queue.js), but a hard process crash in that same narrow
+  window — after Letterboxd has saved the entry but before `markSynced` runs —
+  bypasses that handling entirely, and a restart could re-post the row. The
+  window is small and closing it fully would need a two-phase commit, which is
+  not warranted here.
+- **`formatViewingDate` (`server/helpers/dates.js`) uses `toISOString()`,
+  which shifts the date backwards by one day for any deployment timezone east
+  of UTC.** A deployment east of UTC would therefore post diary dates one day
+  early. US-Eastern deployments and any deployment running with `TZ=UTC` are
+  unaffected. Not fixed here: the helper is shared with `routes/exports.js`
+  and the RSS feed, so changing it would alter existing, already-reviewed
+  behaviour outside the scope of this feature; it belongs in its own change.
 
 ## Deviations from this design
 

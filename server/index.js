@@ -52,6 +52,13 @@ const createServer = async () => {
   try {
     console.log('Starting MovieThing server...');
     const result = await testConnection();
+
+    const { config: lbxConfig, configError: lbxConfigError, worker: lbxWorker } = require('./letterboxd');
+    if (lbxConfigError) {
+      console.error(`Letterboxd sync misconfigured: ${lbxConfigError}`);
+      process.exit(1);
+    }
+
     const server = app.listen(port, () => {
       console.log(`✅ Server running on port ${port}`);
       if (!result.success) {
@@ -61,7 +68,6 @@ const createServer = async () => {
       }
     });
 
-    const { config: lbxConfig, worker: lbxWorker } = require('./letterboxd');
     if (lbxConfig.enabled && process.env.NODE_ENV !== 'test') {
       lbxWorker.start();
       console.log(`✅ Letterboxd sync enabled (every ${lbxConfig.intervalSeconds}s)`);

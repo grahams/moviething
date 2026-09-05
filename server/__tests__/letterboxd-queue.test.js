@@ -1,7 +1,7 @@
 'use strict';
 
 const { runOnce, imdbIdFrom, MAX_ATTEMPTS } = require('../letterboxd/queue');
-const { AuthError, TransientError, PermanentError } = require('../letterboxd/errors');
+const { AuthError, TransientError, PermanentError, AmbiguousError } = require('../letterboxd/errors');
 
 function makeDb(overrides = {}) {
   return {
@@ -204,6 +204,36 @@ describe('runOnce', () => {
 
     expect(client.logEntry).toHaveBeenCalledTimes(2);   // row 2 was still attempted
     expect(result.pushed).toBe(1);
+  });
+
+  it('marks a row skipped, not failed, on AmbiguousError, and continues the batch', async () => {
+    const db = makeDb({ getEligibleRows: jest.fn().mockResolvedValue([row({ id: 1 }), row({ id: 2 })]) });
+    const client = {
+      logEntry: jest.fn()
+        .mockRejectedValueOnce(new AmbiguousError('request failed after dispatch'))
+        .mockResolvedValueOnce({ uri: 'u' })
+    };
+
+    const result = await runOnce({ client, db, limit: 10, pauseThreshold: 25 });
+
+    // 'failed' would be re-queued by /retry and risk a duplicate diary entry.
+    expect(db.markSkipped).toHaveBeenCalledWith(1, expect.stringContaining('outcome unknown'));
+    expect(db.markFailed).not.toHaveBeenCalled();
+    expect(db.recordAttempt).not.toHaveBeenCalled();
+    expect(client.logEntry).toHaveBeenCalledTimes(2);   // did not halt the run like AuthError
+    expect(db.markSynced).toHaveBeenCalledWith(2, 'u');
+    expect(result.failed).toBe(1);
+    expect(result.pushed).toBe(1);
+  });
+
+  it('continues the batch when markSkipped for an AmbiguousError also fails', async () => {
+    const db = makeDb({
+      getEligibleRows: jest.fn().mockResolvedValue([row()]),
+      markSkipped: jest.fn().mockRejectedValue(new Error('db still gone'))
+    });
+    const client = { logEntry: jest.fn().mockRejectedValue(new AmbiguousError('boom')) };
+
+    await expect(runOnce({ client, db, limit: 10, pauseThreshold: 25 })).resolves.toBeDefined();
   });
 
   it('does not re-post when markSkipped also fails', async () => {

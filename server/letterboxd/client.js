@@ -1,6 +1,6 @@
 'use strict';
 
-const { AuthError, TransientError, PermanentError } = require('./errors');
+const { AuthError, TransientError, PermanentError, AmbiguousError } = require('./errors');
 
 const BASE = 'https://letterboxd.com';
 const LOG_PATH = '/s/save-diary-entry';
@@ -38,6 +38,17 @@ function createClient(config) {
       return await fetch(url, options);
     } catch (err) {
       throw new TransientError(`request to ${url} failed: ${err.message}`, { cause: err });
+    }
+  }
+
+  // The diary POST needs its own dispatch: unlike the GET above, a dropped
+  // connection here does not tell us whether Letterboxd already saved the
+  // entry. Mapped to AmbiguousError so it is never retried automatically.
+  async function postDiaryEntry(url, options) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      throw new AmbiguousError(`request to ${url} failed: ${err.message}`, { cause: err });
     }
   }
 
@@ -94,15 +105,31 @@ function createClient(config) {
       liked: 'false'
     });
 
-    const res = await request(`${BASE}${LOG_PATH}`, {
+    // 'manual' redirect: Letterboxd film pages are public, so an expired
+    // cookie is invisible to resolveFilmId's GET. It only surfaces here, as a
+    // 302 to sign-in — and fetch's default 'follow' would silently turn that
+    // into a 200 HTML page that looks like an ordinary non-JSON response.
+    const res = await postDiaryEntry(`${BASE}${LOG_PATH}`, {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/x-www-form-urlencoded' }),
-      body: body.toString()
+      body: body.toString(),
+      redirect: 'manual'
     });
 
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers && typeof res.headers.get === 'function'
+        ? res.headers.get('Location') : null;
+      if (location && location.includes('sign-in')) {
+        throw new AuthError('session rejected: redirected to sign-in');
+      }
+    }
     if (res.status === 401 || res.status === 403) {
       throw new AuthError(`log entry rejected with ${res.status}`);
     }
+    // A 5xx here is an explicit server rejection — the write almost certainly
+    // did not commit, so this stays retryable. Downgrading every outage to
+    // AmbiguousError (non-retryable) would strand entries that should simply
+    // be retried, so only the ambiguous cases below get that treatment.
     if (res.status >= 500) {
       throw new TransientError(`log entry returned ${res.status}`);
     }
@@ -112,9 +139,15 @@ function createClient(config) {
     try {
       payload = JSON.parse(text);
     } catch {
-      // An HTML body here means a maintenance or challenge page, not a
-      // rejection of this entry. Retrying is reasonable.
-      throw new TransientError('log entry returned a non-JSON response');
+      // A non-JSON body is either a sign-in page rendered directly (rather
+      // than via redirect) or a maintenance/challenge page. The former is a
+      // known auth failure; the latter's outcome on Letterboxd's side is
+      // unknown, so it is AmbiguousError, not TransientError — retrying risks
+      // posting a duplicate to a public diary.
+      if (/sign[\s-]?in/i.test(text)) {
+        throw new AuthError('session rejected: sign-in page returned instead of JSON');
+      }
+      throw new AmbiguousError('log entry returned a non-JSON response');
     }
 
     if (!payload.result) {

@@ -1,7 +1,7 @@
 'use strict';
 
 const { createClient } = require('../letterboxd/client');
-const { AuthError, TransientError, PermanentError } = require('../letterboxd/errors');
+const { AuthError, TransientError, PermanentError, AmbiguousError } = require('../letterboxd/errors');
 
 const config = { enabled: true, cookie: 'sess=abc', csrf: 'tok123' };
 
@@ -108,12 +108,40 @@ describe('logEntry', () => {
     await expect(createClient(config).logEntry(entry)).rejects.toThrow(TransientError);
   });
 
-  it('throws TransientError when the response is not JSON', async () => {
+  it('throws AmbiguousError when the response is not JSON', async () => {
+    // The POST may have already been processed by Letterboxd; the outcome is
+    // unknown, so this must not be auto-retried (unlike a GET-side non-JSON body).
     mockFetch(filmPage(), {
       ok: true, status: 200, url: 'https://letterboxd.com/s/save-diary-entry',
       text: async () => '<html>maintenance</html>', headers: new Map()
     });
-    await expect(createClient(config).logEntry(entry)).rejects.toThrow(TransientError);
+    await expect(createClient(config).logEntry(entry)).rejects.toThrow(AmbiguousError);
+  });
+
+  it('throws AmbiguousError when the diary POST fetch itself rejects', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(filmPage())
+      .mockRejectedValueOnce(new TypeError('fetch failed'));
+    await expect(createClient(config).logEntry(entry)).rejects.toThrow(AmbiguousError);
+  });
+
+  it('throws AuthError, not AmbiguousError, when the non-JSON body is a sign-in page', async () => {
+    mockFetch(filmPage(), {
+      ok: true, status: 200, url: 'https://letterboxd.com/s/save-diary-entry',
+      text: async () => '<html>Please sign in to continue</html>', headers: new Map()
+    });
+    await expect(createClient(config).logEntry(entry)).rejects.toThrow(AuthError);
+  });
+
+  it('throws AuthError when the diary POST is redirected (302) to sign-in', async () => {
+    // fetch defaults to redirect:'follow', which would turn this into an
+    // innocuous-looking 200 HTML page. The client must use redirect:'manual'
+    // so the 302 itself is visible.
+    mockFetch(filmPage(), {
+      ok: false, status: 302, url: 'https://letterboxd.com/s/save-diary-entry',
+      text: async () => '', headers: new Map([['Location', 'https://letterboxd.com/sign-in']])
+    });
+    await expect(createClient(config).logEntry(entry)).rejects.toThrow(AuthError);
   });
 
   it('sends rewatch=true when rewatch is set', async () => {

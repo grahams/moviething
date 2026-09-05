@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
-const { worker } = require('../letterboxd');
+const { worker, config } = require('../letterboxd');
 const queries = require('../letterboxd/queries');
 
 const router = express.Router();
@@ -21,6 +21,9 @@ router.get('/letterboxd/status', requireAuth, async (req, res, next) => {
 
 router.post('/letterboxd/sync', requireAuth, async (req, res, next) => {
   try {
+    if (!config.enabled) {
+      return res.status(409).json({ error: 'Letterboxd sync is disabled (MOVIETHING_LETTERBOXD_ENABLED).' });
+    }
     const confirm = req.query.confirm === 'true';
     const outcome = await worker.runNow({ confirm });
 
@@ -48,6 +51,9 @@ router.post('/letterboxd/sync', requireAuth, async (req, res, next) => {
 
 router.post('/letterboxd/retry', requireAuth, async (req, res, next) => {
   try {
+    if (!config.enabled) {
+      return res.status(409).json({ error: 'Letterboxd sync is disabled (MOVIETHING_LETTERBOXD_ENABLED).' });
+    }
     const requeued = await queries.resetFailed();
     res.json({ data: { ok: true, requeued } });
   } catch (err) {
