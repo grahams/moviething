@@ -76,4 +76,11 @@ describe('letterboxd queries', () => {
     expect(sql).toMatch(/letterboxdAttempts = 0/);
     expect(n).toBe(3);
   });
+
+  it('truncates an over-long error message to fit VARCHAR(512)', async () => {
+    query.mockResolvedValue({});
+    await q.markFailed(1, 'x'.repeat(900));
+    const [, params] = query.mock.calls[0];
+    expect(params[0]).toHaveLength(512);
+  });
 });
