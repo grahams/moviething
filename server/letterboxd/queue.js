@@ -63,8 +63,8 @@ async function runOnce({ client, db, limit, pauseThreshold }) {
           await db.recordAttempt(row.id, err.message);
         }
       } catch (dbErr) {
-        // Finding 2: one row's bookkeeping failure must not abandon the rest of
-        // the batch. The row stays pending and is retried next run.
+        // One row's bookkeeping failure must not abandon the rest of the
+        // batch. The row stays pending and is retried next run.
         console.error(`letterboxd: could not record outcome for row ${row.id}: ${dbErr.message}`);
       }
       continue;

@@ -255,3 +255,102 @@ is buildable and fully testable before the spike lands. Only the internals of
 - **Duplicate diary entries.** Mitigated by no-backfill (§1) and the pause
   threshold (§6). Letterboxd cannot detect duplicates, so this failure mode is
   prevented rather than corrected.
+
+## Deviations from this design
+
+Four points where the implementation departed from what is written above:
+
+1. **A row with no IMDb ID is `skipped`, not `failed`** (§5 said `failed`).
+   Festival shorts frequently have no IMDb entry at all, and no retry can ever
+   fix that. Marking these `failed` would fill the failure list with permanent,
+   unactionable noise instead of the real signal it's meant to carry.
+
+2. **`confirm` is a query parameter (`?confirm=true`), not a body field**
+   (§7 sketched a JSON body, `{"confirm": true}`). Validated request bodies in
+   this codebase use the `{json: "<stringified>"}` convention (see
+   "Request body convention" above), which is awkward for an operational
+   endpoint meant to be reached with a plain `curl` command.
+
+3. **`worker.runNow` returns a discriminated outcome**,
+   `{ok:true,result} | {ok:false,reason:'busy'} | {ok:false,reason:'error',error}`,
+   so `POST /api/letterboxd/sync` can tell "a run is already in progress" (409)
+   apart from "the run errored" (500). Without this distinction a database
+   failure during the run would have been reported to the caller identically
+   to "just retry in a bit."
+
+4. **The client harvests the CSRF token from the film-page response** when
+   `MOVIETHING_LETTERBOXD_CSRF` is blank, rather than requiring the variable.
+   This is what makes `.env.example`'s "fetched automatically" comment on that
+   variable true rather than aspirational.
+
+## Before enabling this (human steps)
+
+None of the following happened during implementation — Docker was unavailable,
+and posting to a real, public Letterboxd diary needs credentials only the
+account owner holds. Do these in order before flipping
+`MOVIETHING_LETTERBOXD_ENABLED` on for real:
+
+1. **Run the Task 1 spike** against the real account (see "Implementation
+   sequencing" above) to verify the endpoint hypothesis this design rests on.
+   Reconcile `server/letterboxd/client.js`'s constants — `BASE`, `LOG_PATH`,
+   the `URLSearchParams` field names (`__csrf`, `filmId`, `specifiedDate`,
+   `viewingDateStr`, `rewatch`, `review`, `tags`, `rating`, `liked`), and the
+   CSRF cookie name matched in `harvestCsrf`
+   (`com.xk72.webparts.csrf`) — against whatever the spike actually finds.
+   Fix `client.js` if reality disagrees.
+
+2. **Verify the migration against a real MariaDB.** This was never run —
+   Docker was unavailable throughout implementation. Run exactly the commands
+   from the plan's Task 2 Step 2
+   (`docs/superpowers/plans/2026-09-05-letterboxd-sync.md`):
+
+   ```bash
+   docker compose up -d mariadb
+   sleep 15
+   docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" <<'SQL'
+   CREATE TABLE IF NOT EXISTS movies (
+     id INT AUTO_INCREMENT PRIMARY KEY, movieTitle VARCHAR(255), viewingDate DATE,
+     movieURL VARCHAR(255), viewFormat VARCHAR(64), viewLocation VARCHAR(128),
+     firstViewing TINYINT(1), movieGenre VARCHAR(64), movieReview TEXT);
+   INSERT INTO movies (movieTitle) VALUES ('Old Film');
+   SQL
+   docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" \
+     < mariadb/docker-entrypoint-initdb.d/002-letterboxd-sync.sql
+   # Run it a SECOND time — must succeed and change nothing.
+   docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" \
+     < mariadb/docker-entrypoint-initdb.d/002-letterboxd-sync.sql
+   docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" <<'SQL'
+   INSERT INTO movies (movieTitle) VALUES ('New Film');
+   SELECT movieTitle, letterboxdStatus FROM movies;
+   SQL
+   ```
+
+   The root password is `$MOVIETHING_SQL_PASS`. Required result, exactly:
+   `Old Film` reads `skipped` and `New Film` reads `pending`. Anything else
+   means the migration's default-flip trick did not work as designed, and it
+   must be fixed before going further.
+
+3. **Apply the migration to the live database by hand.** The
+   `mariadb/docker-entrypoint-initdb.d/002-letterboxd-sync.sql` file only runs
+   automatically against an empty data directory — the live database already
+   has data, so it will not be picked up on container start. Run it directly
+   against production, the same way it was run in step 2 above.
+
+4. **Enable and check status before any sync runs.** Set
+   `MOVIETHING_LETTERBOXD_ENABLED=true` and `MOVIETHING_LETTERBOXD_COOKIE`,
+   restart, then:
+
+   ```bash
+   curl -s -H "X-Api-Key: $MOVIETHING_VALID_API_KEY" \
+     localhost:3000/api/letterboxd/status | jq .
+   ```
+
+   Confirm `counts.pending` is **0** before adding anything or running a sync.
+   **If it is anything other than 0, stop.** A non-zero pending count at this
+   point means step 3's migration did not mark existing history as `skipped`,
+   and running a sync would post duplicate entries to the real, public diary.
+
+5. **Only then**, add one film through the normal add form and run
+   `POST /api/letterboxd/sync`. Confirm it appears in the real Letterboxd
+   diary with the correct date and review before considering this feature
+   live.

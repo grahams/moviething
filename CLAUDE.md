@@ -65,6 +65,9 @@ full inside each router). The client is served as static files from `client/`.
 | GET | `/api/exportLetterboxd` | — | CSV export |
 | GET | `/api/rss` | — | RSS feed |
 | GET | `/api/health` | — | health check with DB status |
+| GET | `/api/letterboxd/status` | **yes** | sync queue state and recent failures |
+| POST | `/api/letterboxd/sync` | **yes** | run a sync now; `?confirm=true` overrides the pause guard |
+| POST | `/api/letterboxd/retry` | **yes** | re-queue `failed` rows |
 
 **Auth applies to writes only.** `requireAuth` (`server/middleware/auth.js`) is
 attached per-route to `newEntry`, `newEntries`, and `PUT /entry/:id`. Reads,
@@ -106,6 +109,40 @@ must also be applied by hand. Write migrations to be idempotent
 
 `movieURL` holds an IMDb URL; the IMDb ID is extracted with `/tt\d{7,8}/` where
 needed (see `routes/exports.js`).
+
+#### Letterboxd sync
+
+Optional, **off by default**. New rows are born `letterboxdStatus = 'pending'`
+via a column default, and a background worker pushes them to Letterboxd. The
+write path is untouched: `routes/entries.js` knows nothing about any of this, so
+a Letterboxd outage can never affect a database write.
+
+- `letterboxd/client.js` — the only module that knows Letterboxd's wire format.
+  It is undocumented and unversioned, so this is the file that breaks when
+  Letterboxd changes; fix it here and nothing else needs to move.
+- `letterboxd/queue.js` — retry and backoff policy. Client and DB are injected,
+  so it is tested with no network and no database.
+- `letterboxd/worker.js` — interval loop. Never starts under `NODE_ENV=test`.
+
+Statuses: `pending` → `synced`, or `failed` (actionable; `retry` re-queues these),
+or `skipped`. `skipped` covers pre-existing history and entries with no IMDb ID
+in `movieURL` — common for festival shorts, and not a failure, since no retry
+can help. A row is also marked `skipped` (not `failed`) when the Letterboxd post
+succeeds but the follow-up database write fails: the diary entry already exists,
+so `letterboxdError` preserves its URL for manual reconciliation, and the row is
+kept out of `POST /api/letterboxd/retry`'s reach — retrying a `failed` row would
+post a duplicate to a public diary.
+
+`POST /api/letterboxd/sync` returns 409 when a run is already in progress, 409
+when the pending count exceeds the pause threshold (message names
+`?confirm=true` as the override), and 500 when the run itself errored.
+
+An expired session cookie halts the run without consuming any entry's retry
+budget, and shows as `authOk: false`. Paste a fresh cookie and `POST
+/api/letterboxd/sync`.
+
+`MOVIETHING_LETTERBOXD_CSRF` is optional even when the feature is enabled: the
+client harvests the token from the film-page response when it is blank.
 
 ### Frontend (`client/`)
 
