@@ -172,4 +172,49 @@ describe('runOnce', () => {
     await runOnce({ client: { logEntry: jest.fn() }, db, limit: 3, pauseThreshold: 25 });
     expect(db.getEligibleRows).toHaveBeenCalledWith(3);
   });
+
+  it('marks a row skipped, not failed, when the post succeeded but recording did not', async () => {
+    const db = makeDb({
+      getEligibleRows: jest.fn().mockResolvedValue([row()]),
+      markSynced: jest.fn().mockRejectedValue(new Error('db gone'))
+    });
+    const client = { logEntry: jest.fn().mockResolvedValue({ uri: 'https://lb/x/1/' }) };
+
+    const result = await runOnce({ client, db, limit: 10, pauseThreshold: 25 });
+
+    // 'failed' would be re-queued by /retry and duplicate the diary entry.
+    expect(db.markSkipped).toHaveBeenCalledWith(1, expect.stringContaining('https://lb/x/1/'));
+    expect(db.markFailed).not.toHaveBeenCalled();
+    expect(result.pushed).toBe(0);
+    expect(result.failed).toBe(1);
+  });
+
+  it('continues the batch when a bookkeeping write throws', async () => {
+    const db = makeDb({
+      getEligibleRows: jest.fn().mockResolvedValue([row({ id: 1 }), row({ id: 2 })]),
+      recordAttempt: jest.fn().mockRejectedValue(new Error('db blip'))
+    });
+    const client = {
+      logEntry: jest.fn()
+        .mockRejectedValueOnce(new TransientError('503'))
+        .mockResolvedValueOnce({ uri: 'u' })
+    };
+
+    const result = await runOnce({ client, db, limit: 10, pauseThreshold: 25 });
+
+    expect(client.logEntry).toHaveBeenCalledTimes(2);   // row 2 was still attempted
+    expect(result.pushed).toBe(1);
+  });
+
+  it('does not re-post when markSkipped also fails', async () => {
+    const db = makeDb({
+      getEligibleRows: jest.fn().mockResolvedValue([row()]),
+      markSynced: jest.fn().mockRejectedValue(new Error('db gone')),
+      markSkipped: jest.fn().mockRejectedValue(new Error('db still gone'))
+    });
+    const client = { logEntry: jest.fn().mockResolvedValue({ uri: 'u' }) };
+
+    await expect(runOnce({ client, db, limit: 10, pauseThreshold: 25 })).resolves.toBeDefined();
+    expect(client.logEntry).toHaveBeenCalledTimes(1);
+  });
 });
