@@ -214,19 +214,19 @@ whole basis of "existing history is never pushed" — so prove it:
 ```bash
 docker compose up -d mariadb
 sleep 15
-docker compose exec -T mariadb mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MOVIETHING_SQL_DB" <<'SQL'
+docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" <<'SQL'
 CREATE TABLE IF NOT EXISTS movies (
   id INT AUTO_INCREMENT PRIMARY KEY, movieTitle VARCHAR(255), viewingDate DATE,
   movieURL VARCHAR(255), viewFormat VARCHAR(64), viewLocation VARCHAR(128),
   firstViewing TINYINT(1), movieGenre VARCHAR(64), movieReview TEXT);
 INSERT INTO movies (movieTitle) VALUES ('Old Film');
 SQL
-docker compose exec -T mariadb mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MOVIETHING_SQL_DB" \
+docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" \
   < mariadb/docker-entrypoint-initdb.d/002-letterboxd-sync.sql
 # Run it a SECOND time — must succeed and change nothing.
-docker compose exec -T mariadb mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MOVIETHING_SQL_DB" \
+docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" \
   < mariadb/docker-entrypoint-initdb.d/002-letterboxd-sync.sql
-docker compose exec -T mariadb mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MOVIETHING_SQL_DB" <<'SQL'
+docker compose exec -T mariadb mariadb -uroot -p"$MOVIETHING_SQL_PASS" "$MOVIETHING_SQL_DB" <<'SQL'
 INSERT INTO movies (movieTitle) VALUES ('New Film');
 SELECT movieTitle, letterboxdStatus FROM movies;
 SQL
