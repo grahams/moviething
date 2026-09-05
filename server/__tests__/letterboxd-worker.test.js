@@ -110,4 +110,25 @@ describe('createWorker', () => {
     await expect(w.runNow()).resolves.toBeDefined();
     expect(w.getState().lastError).toMatch(/db down/);
   });
+
+  it('reports busy, distinguishably, when a run is already in progress', async () => {
+    jest.useFakeTimers();
+    let release;
+    const runOnce = jest.fn(() => new Promise(r => { release = () => r(ok); }));
+    const w = makeWorker(runOnce);
+    const first = w.runNow();
+    const second = await w.runNow();
+    expect(second).toEqual({ ok: false, reason: 'busy' });
+    release();
+    await first;
+  });
+
+  it('reports an error distinguishably from busy', async () => {
+    const runOnce = jest.fn().mockRejectedValue(new Error('db down'));
+    const w = makeWorker(runOnce);
+    const outcome = await w.runNow();
+    expect(outcome.ok).toBe(false);
+    expect(outcome.reason).toBe('error');
+    expect(outcome.error).toMatch(/db down/);
+  });
 });

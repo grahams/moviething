@@ -18,7 +18,7 @@ function createWorker({ config, db, client, runOnce }) {
   };
 
   async function execute({ confirm = false } = {}) {
-    if (running) return null;
+    if (running) return { ok: false, reason: 'busy' };
     running = true;
     try {
       const result = await runOnce({
@@ -33,10 +33,10 @@ function createWorker({ config, db, client, runOnce }) {
       state.authOk = !result.authFailed;
       state.lastError = null;
       if (result.authFailed) stop();
-      return result;
+      return { ok: true, result };
     } catch (err) {
       state.lastError = err.message;
-      return null;
+      return { ok: false, reason: 'error', error: err.message };
     } finally {
       state.lastRun = new Date().toISOString();
       running = false;
@@ -58,9 +58,9 @@ function createWorker({ config, db, client, runOnce }) {
   // A manual run always executes, even after start() halted on an auth
   // failure — that is how a freshly pasted cookie gets tried.
   async function runNow(options = {}) {
-    const result = await execute(options);
-    if (result && !result.authFailed && !timer && config.enabled) start();
-    return result;
+    const outcome = await execute(options);
+    if (outcome.ok && !outcome.result.authFailed && !timer && config.enabled) start();
+    return outcome;
   }
 
   function getState() {
