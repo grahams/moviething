@@ -17,8 +17,9 @@ client/dist/
 .env.test.local
 .env.production.local
 
-# test mariadb instance
-mariadb/
+# mariadb data volume and runtime artifacts (schema/migrations tracked separately)
+mariadb/*
+!mariadb/docker-entrypoint-initdb.d/
 
 # Logs
 npm-debug.log*
