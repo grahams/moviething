@@ -426,3 +426,38 @@ the diary POST — is challenged. The browser passes these because it holds a
 retry, and backoff machinery are unaffected and remain useful; only
 `client.js`'s transport is blocked. See the decision recorded below this
 section once a direction is chosen.
+
+## Decision (2026-09-05): parked
+
+The automated transport is not viable, so this work is **parked, complete and
+disabled**, rather than pivoted or deleted. `MOVIETHING_LETTERBOXD_ENABLED`
+defaults to `false`; nothing runs until someone sets it.
+
+**Why parked rather than pivoted.** The blocker is environmental, not a design
+error — everything except `client.js` is sound and tested. If Letterboxd ever
+opens API access, or the protection changes, the queue, schema, backoff, pause
+guard, status and retry endpoints are all still here and still correct.
+
+**What a future attempt should know**, so it does not repeat this one:
+- The Cloudflare challenge on `/s/*` is the whole problem. Test it FIRST
+  (`curl -s -D- -o/dev/null 'https://letterboxd.com/s/autocompletefilm?q=heat'`
+  — look for `cf-mitigated: challenge`) before writing any transport code.
+- `cf_clearance` is not a workable credential: IP- and User-Agent-bound, and
+  short-lived. A cookie copied from a browser will not authorise the server.
+- If the challenge is ever gone, the corrections in "Spike findings" above are
+  what `client.js` needs: `viewingableUid` (`film:<id>`) rather than `filmId`,
+  the confirmed field list, and `letterboxd.user.CURRENT` as the session cookie.
+  `resolveFilmId` needs rewriting entirely — `data-film-id` no longer exists.
+
+**The still-unverified item**, if this is ever resumed: the migration
+(`002-letterboxd-sync.sql`) was never run against a real MariaDB, because Docker
+was unavailable. See "Before enabling this (human steps)". Its
+`DEFAULT 'skipped'` → `SET DEFAULT 'pending'` ordering is what keeps existing
+history out of the diary, so verify it before enabling anything.
+
+**Rejected alternatives**, recorded so they are not re-litigated blindly:
+a headless browser on the server (disproportionate for a few films a week,
+fingerprinted by Cloudflare anyway, and the challenge is a clear signal from
+Letterboxd); and pivoting to a tracked CSV export (viable and ToS-clean, but
+not wanted at this time — the existing `GET /api/exportLetterboxd` already
+covers the manual path).
