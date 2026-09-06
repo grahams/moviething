@@ -369,3 +369,60 @@ account owner holds. Do these in order before flipping
    `POST /api/letterboxd/sync`. Confirm it appears in the real Letterboxd
    diary with the correct date and review before considering this feature
    live.
+
+## Spike findings (2026-09-05) — the automated transport is blocked
+
+Run against a real, logged-in account. **Result: the design's HTTP transport
+cannot work as specified.** Recorded here without hedging.
+
+### Blocker: Cloudflare challenges the endpoints we need
+
+Measured anonymously, `cf-mitigated: challenge` in the response headers:
+
+| path | result |
+|---|---|
+| `GET /film/heat-1995/` | 200 — passes |
+| `GET /imdb/tt0113277/` | 302 → `/film/heat-1995/` — passes |
+| `GET /s/autocompletefilm?q=heat` | **403, Cloudflare challenge** |
+| `POST /s/save-diary-entry` | **403, Cloudflare challenge** |
+
+Ordinary HTML pages are served normally; every `/s/` AJAX endpoint — including
+the diary POST — is challenged. The browser passes these because it holds a
+`cf_clearance` cookie earned by solving the challenge.
+
+`cf_clearance` cannot carry this design:
+- it is bound to the client **IP address and User-Agent**, so a value copied
+  from the owner's browser will not authorise requests from the server, which
+  has a different IP;
+- it is short-lived (typically minutes to hours), so it cannot be pasted once
+  and left, which was the entire premise of §4.
+
+### Secondary findings (correct, but moot while the above stands)
+
+1. **`LOG_PATH` was right.** `action="/s/save-diary-entry"` is present in the
+   page markup, confirming the endpoint and that it is a form POST.
+2. **`filmId` does not exist.** The real field is **`viewingableUid`**, whose
+   value takes the form `film:<numeric id>` (the `<type>:<id>` convention is
+   visible elsewhere on the page, e.g. `/s/full-text/viewing:138872204/`).
+3. **Confirmed form fields**, read from the live form: `__csrf`, `viewingId`,
+   `viewingableUid`, `specifiedDate`, `rewatch`, `viewingDateStr`, `review`,
+   `containsSpoilers`, `tags`, `rating`, `liked`.
+4. **`data-film-id` no longer exists** on a film page, so `resolveFilmId`'s
+   approach is obsolete regardless. Logging is now a *search wizard*: JS
+   resolves the film through `/s/autocompletefilm` and fills `viewingableUid`.
+   That search endpoint is itself Cloudflare-challenged.
+5. **`__csrf` ships as the literal string `placeholder`** in the static markup;
+   the real token is injected client-side from the `com.xk72.webparts.csrf`
+   cookie, which *is* issued via `Set-Cookie` on a normal page request. The
+   `harvestCsrf` design was therefore sound.
+6. **The session cookie is `letterboxd.user.CURRENT`**, not
+   `letterboxd.signed.in.as` (which merely holds the username and is not a
+   credential). `GET /settings/` returns **200 when signed out**, serving a
+   sign-in page — any auth check must test content, not status code.
+
+### Consequence
+
+`MOVIETHING_LETTERBOXD_ENABLED` must stay `false`. The queue, schema, status,
+retry, and backoff machinery are unaffected and remain useful; only
+`client.js`'s transport is blocked. See the decision recorded below this
+section once a direction is chosen.
