@@ -1,10 +1,7 @@
 FROM node:26-trixie-slim
 
-# Install MariaDB client libraries and curl for health checks
-RUN apt-get update && apt-get install -y \
-    libmariadb3 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# No extra apt packages: the mariadb driver is pure JS (no libmariadb needed)
+# and the healthcheck uses Node's built-in fetch instead of curl.
 
 WORKDIR /app
 
@@ -24,7 +21,7 @@ ENV NODE_ENV=production
 EXPOSE 3000
 ENV SERVER_PORT=3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'curl -f http://localhost:${SERVER_PORT}/api/health || exit 1'
+    CMD node -e "fetch('http://localhost:'+process.env.SERVER_PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Create a startup script
 RUN echo '#!/bin/bash\n\
