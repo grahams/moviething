@@ -33,7 +33,7 @@ services:
         condition: service_healthy
 
   mariadb:
-    image: mariadb:10.11
+    image: mariadb:11.8
     container_name: moviething-db
     restart: unless-stopped
     env_file: .env
@@ -42,6 +42,10 @@ services:
       - MYSQL_DATABASE=${MOVIETHING_SQL_DB:-movies}
       - MYSQL_USER=${MOVIETHING_SQL_USER:-root}
       - MYSQL_PASSWORD=${MOVIETHING_SQL_PASS:-password}
+      # Runs mariadb-upgrade (after a backup of the system tables) whenever the
+      # data directory was written by an older server version, and creates the
+      # user that healthcheck.sh connects as.
+      - MARIADB_AUTO_UPGRADE=1
     ports:
       - 3306:3306
     volumes:
@@ -51,7 +55,8 @@ services:
       - ./mariadb/my-resolve.cnf:/etc/mysql/conf.d/my-resolve.cnf:ro
       - ./mariadb/backup.options:/backup.options:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MOVIETHING_SQL_USER}", "-p${MOVIETHING_SQL_PASS:-password}"]
+      # mysqladmin is no longer shipped in the 11.x image; use its bundled script.
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5

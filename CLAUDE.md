@@ -131,8 +131,8 @@ Client tests live in `client/__tests__/` and cover `filter.js` and
 
 ### Infrastructure
 
-Docker Compose (`compose.yml`) runs three services: the app (`node:24-bookworm-slim`),
-MariaDB 10.11, and phpMyAdmin (port 8080). DB data lives in `./mariadb/db`.
+Docker Compose (`compose.yml`) runs three services: the app (`node:26-trixie-slim`),
+MariaDB 11.8, and phpMyAdmin (port 8080). DB data lives in `./mariadb/db`.
 
 ### Testing
 
