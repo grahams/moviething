@@ -1,5 +1,7 @@
 'use strict';
 
+const { z } = require('zod');
+
 function validate(schema) {
   return (req, res, next) => {
     if (!req.body || !req.body.json) {
@@ -13,7 +15,7 @@ function validate(schema) {
     }
     const result = schema.safeParse(parsed);
     if (!result.success) {
-      return res.status(400).json({ error: result.error.flatten() });
+      return res.status(400).json({ error: z.flattenError(result.error) });
     }
     req.validatedBody = result.data;
     next();
