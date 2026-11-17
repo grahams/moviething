@@ -11,7 +11,12 @@ COPY server/ ./server/
 COPY client/ ./client/
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+# Remove npm after installing: the app never uses it at runtime, and the copy
+# bundled with the node image drags in its own vulnerable deps (undici,
+# brace-expansion, ...).
+RUN npm ci --omit=dev \
+    && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Copy application code
 #COPY . .
@@ -29,6 +34,7 @@ set -e\n\
 echo "Waiting for dependencies..."\n\
 sleep 5\n\
 echo "Starting MovieThing application..."\n\
-exec npm start' > /start.sh && chmod +x /start.sh
+cd /app/server\n\
+exec node index.js' > /start.sh && chmod +x /start.sh
 
 CMD ["/start.sh"] 
