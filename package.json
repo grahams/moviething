@@ -12,5 +12,8 @@
     "test": "npm run test --workspaces"
   },
   "devDependencies": {},
-  "dependencies": {}
+  "dependencies": {},
+  "overrides": {
+    "test-exclude": "^8.0.0"
+  }
 }
